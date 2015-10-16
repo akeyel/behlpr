@@ -1043,7 +1043,7 @@ metacom.analysis = function(sp.data, year){
   a = pairs(plot.data2) # FAIL - figure margins too large (i.e., it wants to make a BIG graph)
   # Do metacom's metacommunity analysis
     # This takes a long time to run!
-  outputs = Metacommunity(plot.data2)
+  outputs = metacom::Metacommunity(plot.data2)
 
   #**# Maybe try the metacom stuff with Helge's data?? Maybe it'll give better results? I'm a little concerned about data quailty, given some of the perfect correlations.
   
