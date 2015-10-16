@@ -1,0 +1,19 @@
+# Version 0.1.4
+Partially fixed do.descriptives
+fixed col.index generation
+Switched to using devtools to reload packages
+
+# Version 0.1.3
+Fixed do.descriptives function (in progress)
+
+# Version 0.1.2
+#Updates
+# Exported: do.sdm; output.results.to.table; prepare.spfile; do.spatial.demography
+
+# Version 0.1.1
+# Updates:
+Exported: read.sp.data; setup.predictors
+
+# Version 0.1.0
+Plan is to consolidated several existing scripts into a single package to increase ease of use and improve documentation.
+Currently this is a development package, and is not intended for public distribution.

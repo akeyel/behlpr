@@ -1,0 +1,11 @@
+Package: behlpr
+Type: Package
+Title: Functions to run my biodiversity analysis
+Version: 0.1.3.9999
+Date: 2015-09-30
+Author: Alexander Keyel
+Maintainer: Alexander Keyel <skeyel@gmail.com>
+Description: Personal package to assist in running the biodiveristy
+    exploratories final analysis. Using a package format to keep everything
+    consolidated.
+License: All rights reserved
