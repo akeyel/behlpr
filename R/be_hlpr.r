@@ -191,6 +191,30 @@ setup.predictors = function(sp.data, predictors.vec, predictors.paths){
   return(list(my.data, my.index, col.index))
 }
 
+#' main function for biotic predictors
+#' 
+#' 
+set.up.biotic.predictors = function(my.data, biotic.predictors, biotic.predictors.path){
+  #**# right now, simplifying because I only have two options
+  
+  if (biotic.predictor == "isolation"){
+    # Create a predictor that gives the distance to the nearest occupied plot
+    # Note that this would be one tool for screening & subsetting to only colonized plots
+    # (and might need to be calculated & ignored for the biotic loop?)
+    # Maybe the set up should move outside the analysis loop - these will be relevant for
+    # all the analyses - probably the best idea, then the descriptive analysis can move out too.
+    stop("not yet scripted")
+  }
+  
+  if (biotic.predictor == "previous"){
+    # Create a predictor based on the previous year's timestep.
+    # how does this work with your proposed threshold-based approach???
+    # Does this have relevance for a SDM???
+    message("scripting in progress")
+  }
+  
+  return(biotic.information)
+}
 
 #' Read in be_data file
 #'
@@ -1141,3 +1165,28 @@ Reimagine = function (comm, col = c(0, 1), ordinate = TRUE, scores = 1, fill = T
   mtext(ylab, 2, cex = 1.5, line = yline)
 }
 
+
+#' Biotic interactions note
+#' 
+#' @export why.not.include.biotic.interactions
+why.not.include.biotic.interactions = function(){
+  message("Note: Biotic interactions between species are being
+          excluded from the analysis for now, as there is no strong evidence
+          for them based on bivariate relationships.\n
+          This is not to say they don't exist, just that they are not obvious from a coarse approach 
+          and thus a more time intensive and possibly experimental approach would be warrented")
+  #biotic.path = stop("This variable has not yet been configured")
+  #biotic.vec = c("isolation", "prior occupancy", "biotic filter")
+}
+
+metacom.analysis.notes = function(){
+  
+  message("NOTE: Because of the large number of species pairs, we used the Imagine function from
+           the metacom package to graph species vs. plots to visually look for interacting species pairs
+           We saw some indication of specialization (e.g., SCH specialists and Alb specialists)
+           But no strong patterns of interaction. I should probably talk with some of the people doing indicator
+           analysis to see if this matches with their assessment of the data (or if I am wrong)
+           - should email Eric Allen, or Klaus ??? I don't remember his name - I think he's not part of the exploratories anymore.
+           On this ground, we're going to drop the species interactions from the analysis (this would be good stuff to have in the DFG report)"
+           )
+}

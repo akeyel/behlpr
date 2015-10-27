@@ -1,4 +1,18 @@
-#**# Note to self - I think Bastian might be doing something similar - maybe talk to him & share code.
+#**# Uh oh - this is not the most up-to-date file! 
+
+#' Calculate Fragmentation Data
+#' 
+#' Turned out this was hard to do in R, so I did it in QGIS instead. Here are the steps I took:
+#' @details   Here are the steps I took:
+#' \tabular{ll}{
+#' Download CORINE 2006 (COR06) Data   \tab Accepted continent-wide fragmentation data \cr
+#' Cut COR06 data to match each exploratory \tab work with smaller data files, done earlier in ArcGIS \cr
+#' Reproject COR06 to match exploratories (UTM 32 for HAI & ALB, 33 for SCH). Chose cubic resampling - oh, I bet I know where I got the all forest cells from last time... \tab Better to have everything in same coord. system
+#' Start with plot shapefiles (UTM 32 for HAI & ALB, 33 for SCH)  \tab I made these with ArcGIS based on the .kml files \cr
+#' Set QGIS to do on-the-fly converstions \tab Helps get layers to line up \cr
+#' Buffer plot shapefiles (250 m, 1000 m, 5000 m)      \tab \cr
+#' 
+
 
 # Code out steps needed for CORINE Data
 

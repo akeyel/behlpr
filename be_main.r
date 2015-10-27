@@ -1,5 +1,17 @@
 ## Supporting analysis for Keyel et al. in prep: "TITLE GOES HERE"
 
+## Notes from meeting with Kerstin:
+# Try to check model fit after 7 years
+# Can use Helge's data as a check on species completeness of BE plots (see what else is present in plots)
+# Think about virtual ecologist type approaches
+# Check with Katrin Westphal and Stephen Dewenter about multiscale data
+
+#**# To move:
+# Kevin Darras - recording birdsongs in Indonesia - might we worth talking about soundscape type stuff
+# Kerstin will not be applying for Exploratories funding on the next round (trying to scale back)
+# For report - it was written for 24 mo, we only got 19
+# Report should include highlight of findings and people who interacted on it
+
 ## Index to data analyses
 # One analysis with just abiotic factors
 # One analysis with abiotic factors & proxies for dispersal and biotic filters.
@@ -10,6 +22,9 @@ library(spatialdemography)
 library(myr)
 
 ## 
+
+# Indicator for whether to give messages
+give.messages = 0
 
 # Set up path information
 spath = "C:/docs/beplants/Scripts/"
@@ -35,12 +50,13 @@ sp.data = read.sp.data(sp.file, sp.lookup.file)
 sp.names = names(sp.data[2:length(sp.data)]) # Drop plotyear column, but retain all other species names.
 
 # Do metacom analysis
-message("Metacom analysis code in progress!")
 metacom.analysis(sp.data)
+if (give.messages == 1){ metacom.analysis.notes() }
 
 # Read in trait data
 trait.data = read.traits()
 
+#**# Add an indicator for rare species - so that rarity can be taken into account
 #**# Consider dropping rare species (I dealt with this in the descriptives, too, so need to figure out if, where, and when to code this.)
 
 # Subset species data based on chosen criteria for trait data
@@ -69,7 +85,9 @@ model.timestep = 2010
 actual.presences.lst = convert.sp.data(sp.data, model.timestep) # Create the model object based on sp.data
 
 # Set up predictor variables
-analysis.vec = c("abiotic", "all")
+#**# Note: to use distance to most recently occupied patch, I think we have to restrict the dataset to colonizations
+
+analysis.vec = c("abiotic", "previous", "colonization-abiotic", "colonization-biotic")
 
 #This point saved as SavePoint1.RData
 
@@ -77,7 +95,14 @@ analysis.vec = c("abiotic", "all")
 #for (analysis.type in analysis.vec){
   analysis.type = analysis.vec[1]
   # Potential predictor variables: c("climate", "landuse", "biotic", "isolation")
-  
+
+  # If looking only at colonization information, set an indicator to restrict
+  #data set to plots that have been colonized #**# Note: should also do it including previous year lag
+  colonization.only = 0
+  if (analysis.type == "colonization-abiotic" || analysis.type == "colonization-biotic"){
+    colonization.only = 1    
+  }  
+
   # Abiotic variables
   lu.path = sprintf("%sBExIS/landuse/16029.csv", dpath)
   config.path = stop("This variable is not yet available")
@@ -88,23 +113,34 @@ analysis.vec = c("abiotic", "all")
   
   # Biotic variables
   biotic.vec = biotic.paths = c() # Create empty variables in case no biotic variables
-  if (analysis.type == "all"){
+  if (analysis.type == "colonization-biotic"){
     iso.path = stop("This variable has not yet been configured")
-    prev.path = stop("This variable has not yet been configured")
-    biotic.path = stop("This variable has not yet been configured")
-    biotic.vec = c("isolation", "prior occupancy", "biotic filter")
-    biotic.paths = c(iso.path, prev.path, biotic.path)
+    biotic.paths = c(iso.path)
   }
   
+  if (analysis.type == "previous"){
+    prev.path = stop("This variable has not yet been configured")
+    biotic.paths = c(iso.path)    
+  }
+    
+  if (give.messages == 1){ why.not.include.biotic.interactions() }  
+
   # Set up predictors
   predictors.vec = c(abiotic.vec, biotic.vec)
   predictors.paths = c(abiotic.paths, biotic.paths)
   
+  message("Fix this to not take the biotic paths - these are dealt with in a separate input")
   out.info = setup.predictors(sp.data, predictors.vec, predictors.paths)
   my.data = out.info[[1]]
   my.index = out.info[[2]]
   col.index = out.info[[3]]
-      
+  
+  biotic.predictors = NA
+  message("Previous is a really dumb name for an analysis - fix it!")
+  if (analysis.type == "colonization-biotic" | analysis.type == "previous"){
+    biotic.predictors = set.up.biotic.predictors(sp.data, biotic.predictors.vec, biotic.predictors.paths)
+  }
+
   ### Do basic descriptive analysis of data
   message("Descriptive analysis still needs cleaning & proper outputting of results")
   do.descriptives(my.data, my.index, desc.path)
