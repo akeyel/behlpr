@@ -14,11 +14,46 @@ corine = raster("C:/docs/beplants/datasets/CORINE_2006/g100_06.tif")
 plots.dir = "C:/docs/beplants/datasets/GIS/BExIS_data" #**# NOTE: Trailing slash crashes readOGR. I'd totally write a patch for this.
 plots = readOGR(dsn= plots.dir, layer="Grassland_EPs")
 
+# Project plots to UTM
+plots.utm = sp::spTransform(plots, CRS("+proj=utm +zone=32 ellps=WGS84"))
+
+
+#**# Trying to solve spatialpixels problem
+#?raster
+x = seq(479629,867282)
+y = seq(5301768, 5940455)
+vals = length(x) * length(y)
+z = runif(vals,1,10)
+
+raster(nrows = length(x), ncols = length(y), xmn = min(x), xmx = max(x), ymn = min(y), ymx = max(y), vals = z, crs = CRS("+proj=utm +zone=32 ellps=WGS84"))
+
+test = matrix(c(x,y,z), nrow = 3)
+raster(test)
+
+test1 = seq(1,100)
+test2 =
+
+test1 = rep(seq(1,100),2)
+test2 = sort(rep(seq(1,100),2))
+test0 = seq(1,200)
+test3 = matrix(c(test1,test2,test0), ncol = 3)
+
+test = raster(test3)
+test.sp = as(test, "SpatialPixels")
+
 # Get buffer distances around plots
+require(adehabitatMA)
+
+adehabitatMA::buffer(plots.utm, plots.utm, 50)
+#Error in adehabitatMA::buffer(plots, plots, 50) : 
+#  x should inherit the class SpatialPixels
+
 
 
 # Extract Corine data by buffer
+#**# This step will overlap with what Bastian is doing.
 
+#http://stackoverflow.com/questions/13982773/crop-for-spatialpolygonsdataframe
 
 # Reclassify Corine data to grassland, forest, & Other
 
