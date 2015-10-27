@@ -13,7 +13,7 @@
 #' @param sdm.type 1 = basic sdm (nothing fancy), 2 = uses biomod
 #' 
 #' @export do.sdm
-do.sdm = function(sdm.data, my.index, col.index, sdm.type){
+do.sdm = function(sdm.data, my.index, col.index, sdm.type, colonization.only = 0){
   
   # Fix this to be in terms of my.index  
   index.table = table(my.index)
