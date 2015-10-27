@@ -11,6 +11,10 @@
 #' type 2+ correspond to different suites of independent variables
 #' @param col.index Contains indicators for whether or not to include the column as a predictor variable.
 #' @param sdm.type 1 = basic sdm (nothing fancy), 2 = uses biomod
+#' @param colonization.only An indicator for whether to restrict the data set to only
+#' newly colonized plots #**# is this really a good idea? Seemed like one on the surface
+#' but not it seems stupid - you lose stable populations and parts of the core distribution.
+#' But you gain a weak attempt to look at dispersal limitation.
 #' 
 #' @export do.sdm
 do.sdm = function(sdm.data, my.index, col.index, sdm.type, colonization.only = 0){
