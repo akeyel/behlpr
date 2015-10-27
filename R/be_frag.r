@@ -18,15 +18,15 @@
 
 # Load required packages
 library(raster)
+library(rgdal)
 
 # Load CORINE Data
-corine.file = "C:/docs/beplants/datasets/CORINE_2006/g100_06.tif"
-#**# Read in as raster here
+# Reference site: http://neondataskills.org/R/Raster-Data-In-R/
+corine = raster("C:/docs/beplants/datasets/CORINE_2006/g100_06.tif")
 
-# LOad BE Exploratories plot locations
-#**# Looks like they are in kml format, will need to figure out how to read it.
-plots.file = "C:/docs/beplants/datasets/BExIS/google_earth_files/AllPlots.kml"
-#**# Read in as points here
+# Load BE Exploratories plot locations
+plots.dir = "C:/docs/beplants/datasets/GIS/BExIS_data" #**# NOTE: Trailing slash crashes readOGR. I'd totally write a patch for this.
+plots = readOGR(dsn= plots.dir, layer="Grassland_EPs")
 
 # Get buffer distances around plots
 
