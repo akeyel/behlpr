@@ -194,25 +194,54 @@ setup.predictors = function(sp.data, predictors.vec, predictors.paths){
 #' main function for biotic predictors
 #' 
 #' 
-set.up.biotic.predictors = function(my.data, biotic.predictors, biotic.predictors.path){
-  #**# right now, simplifying because I only have two options
+set.up.biotic.predictors = function(sp.data){
+
+  # Create dataset that contains the previous year's data associated with the present year
+  year = substr(sp.data$plotyear,7,10)
+  plot = substr(sp.data$plotyear,1,5)
   
-  if (biotic.predictor == "isolation"){
-    # Create a predictor that gives the distance to the nearest occupied plot
-    # Note that this would be one tool for screening & subsetting to only colonized plots
-    # (and might need to be calculated & ignored for the biotic loop?)
-    # Maybe the set up should move outside the analysis loop - these will be relevant for
-    # all the analyses - probably the best idea, then the descriptive analysis can move out too.
-    stop("not yet scripted")
+  max.year = max(as.numeric(year))
+  
+  # Slow clunky way to get lags
+  sp.data.lag = data.frame(plotyear = as.character(sp.data$plotyear))
+  rownames(sp.data.lag) = sp.data.lag$plotyear
+  
+  # Initialize species columns
+  for (i in 2:ncol(sp.data)){
+    sp.name = names(sp.data)[i]
+    sp.data.lag[[sp.name]] = rep(NA, nrow(sp.data))
   }
   
-  if (biotic.predictor == "previous"){
-    # Create a predictor based on the previous year's timestep.
-    # how does this work with your proposed threshold-based approach???
-    # Does this have relevance for a SDM???
-    message("scripting in progress")
+  # Loop through, and check for lag data
+  for (j in 1:nrow(sp.data)){
+    this.row = sp.data[j, 1:ncol(sp.data)]
+    this.plotyear = sp.data[j, 1]
+    this.year = substr(this.plotyear,7,10)
+    this.plot = substr(this.plotyear,1,5)
+    next.year = as.num(this.year) + 1
+    
+    # Ensure that the year is a subset of the data
+    if (next.year <= max.year){
+      next.plotyear = sprintf("%s_%s", this.plot, next.year)
+      this.row.updated = this.row
+      this.row.updated[1] =  next.plotyear
+      sp.data.lag[next.plotyear, ] = this.row.updated
+    }
   }
+  # spot check suggests results are coming out correctly
   
+  # Convert lag data to occupancy
+  sp.data.lag$plotyear = NULL # Drop to avoid error
+  sp.lag.occupancy = apply(sp.data.lag, c(1,2), myr::pa.recode)
+  
+  # Calculate distance to nearest occupied patch
+  #**# Need x,y coordinates for each plot
+  #plot.xys = etwas
+  #sp.lag.distances = etwas
+  #**# distance matrix tool - need to remember syntax and stuff (may need plot xy's as shapefile - code w/internet's help)
+  
+  biotic.information = list(sp.lag.occupancy) # sp.lag.distances
+    
   return(biotic.information)
 }
 
