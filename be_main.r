@@ -66,7 +66,7 @@ trait.data = read.traits()
 #sp.data = subset.by.traits(sp.data, trait.data, link, trait.lst, trait.vals.lst)
 
 # Set up SDM settings
-sdm.type = 1 # 1 = simple, 2 = with biomod2, 3 = with previous data
+sdm.type = 1 # 1 = simple, 2 = with biomod2, 3 = with previous.occupancy data
 
 # Set up spatialdemography settings
 file.ending = "BE"  
@@ -87,13 +87,13 @@ actual.presences.lst = convert.sp.data(sp.data, model.timestep) # Create the mod
 # Set up predictor variables
 #**# Note: to use distance to most recently occupied patch, I think we have to restrict the dataset to colonizations
 
-analysis.vec = c("abiotic", "previous", "colonization-abiotic", "colonization-biotic")
+analysis.vec = c("abiotic", "previous.occupancy", "colonization-abiotic", "colonization-biotic")
 
 #This point saved as SavePoint1.RData
 
 # Run once with only abiotic factors, then a second time with biotic factors
-#for (analysis.type in analysis.vec){
-  analysis.type = analysis.vec[1]
+for (analysis.type in analysis.vec){
+  #analysis.type = analysis.vec[1]
   # Potential predictor variables: c("climate", "landuse", "biotic", "isolation")
 
   # If looking only at colonization information, set an indicator to restrict
@@ -111,23 +111,22 @@ analysis.vec = c("abiotic", "previous", "colonization-abiotic", "colonization-bi
   #abiotic.paths = c(lu.path, config.path)
   abiotic.paths= c(lu.path)
   
-  # Biotic variables
-  biotic.vec = biotic.paths = c() # Create empty variables in case no biotic variables
-  if (analysis.type == "colonization-biotic"){
-    iso.path = stop("This variable has not yet been configured")
-    biotic.paths = c(iso.path)
-  }
-  
-  if (analysis.type == "previous"){
-    prev.path = stop("This variable has not yet been configured")
-    biotic.paths = c(iso.path)    
-  }
+#   # Biotic variables
+#   biotic.vec = biotic.paths = c() # Create empty variables in case no biotic variables
+#   if (analysis.type == "colonization-biotic"){
+#     biotic.vec = c("")
+#     iso.path = stop("This variable has not yet been configured")
+#     biotic.paths = c(iso.path)
+#   }
+#   
+#   if (analysis.type == "previous.occupancy"){
+#     prev.path = stop("This variable has not yet been configured")
+#     biotic.paths = c(iso.path)    
+#   }
     
-  if (give.messages == 1){ why.not.include.biotic.interactions() }  
-
   # Set up predictors
-  predictors.vec = c(abiotic.vec, biotic.vec)
-  predictors.paths = c(abiotic.paths, biotic.paths)
+  predictors.vec = c(abiotic.vec)
+  predictors.paths = c(abiotic.paths)
   
   message("Fix this to not take the biotic paths - these are dealt with in a separate input")
   out.info = setup.predictors(sp.data, predictors.vec, predictors.paths)
@@ -135,10 +134,14 @@ analysis.vec = c("abiotic", "previous", "colonization-abiotic", "colonization-bi
   my.index = out.info[[2]]
   col.index = out.info[[3]]
   
+
+  if (give.messages == 1){ why.not.include.species.interactions() }  
+
   biotic.predictors = NA
-  message("Previous is a really dumb name for an analysis - fix it!")
-  if (analysis.type == "colonization-biotic" | analysis.type == "previous"){
-    biotic.predictors = set.up.biotic.predictors(sp.data, biotic.predictors.vec, biotic.predictors.paths)
+  if (analysis.type == "colonization-biotic" | analysis.type == "previous.occupancy"){
+    biotic.predictors = set.up.biotic.predictors(sp.data)
+    sp.lag.occupancy = biotic.predictors[[1]]
+    #sp.lag.distances = biotic.predictors[[2]] #**# not yet scripted
   }
 
   ### Do basic descriptive analysis of data
@@ -176,11 +179,11 @@ analysis.vec = c("abiotic", "previous", "colonization-abiotic", "colonization-bi
   # Create a list to hold results from ALL simulations
   sim.lst = list()
   # loop through simulations (note: for pool.type = plot, it should be fairly deterministic?)
-  #for (k in 1:n.sim){
+  for (k in 1:n.sim){
    k = 1 
     predicted.presences.lst = rep(list(NA), n.sp)
     # Loop through plots in the exploratories
-    #for (p in 1:n.plots){
+    for (p in 1:n.plots){
     p = 1
       # Restrict data set to a specific plot
       if (nrow(sp.dat) != n.plots) { stop("Species dataset does not match plot dataset. Something is wrong.")}
