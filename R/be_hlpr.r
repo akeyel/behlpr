@@ -70,6 +70,59 @@ output.results.to.table = function(model.type, model.name, results.table,sp.name
   return(out.dat)
 }
 
+#' Compare plant data between exploratories and Eva's data
+#' 
+#' 
+plant.data.comparison = function(STUFF){
+  
+  # Start with plant data from core monitoring
+  
+  # Read in 8 plot data
+  
+  # Quick graph of species accumulation with addition of plots
+  
+  # Examine degree of overlap between the two data sets
+  
+  # Assess whether or not distance to nearest occupied plot is a potentially useful metric
+  
+}
+
+#' Read in Data from Eva, Helge, & Ute
+read.8plot.data = function(plots.file){
+
+  # Input value for when not running as a function
+  #plots.file = "C:/docs/beplants/datasets/plants/BExIS/19629.csv" # converted from .txt to .csv, because I find commas easier to work with than tabs.
+  
+  plot.dat = read.csv(plots.file)
+  
+  # Add leading 0 to BE plot ID (Is this a function yet? Should make a function)
+  plot.dat = fix.plotid(plot.dat)
+  
+  
+  #**# Below here: make into separate functions
+  # plot species accumulation with addition of releves
+  
+  # Compile species list for 8plot data
+  
+  # At some point, compare species lists (in this function, or in another? Should be a separate function)
+  
+}
+
+#' Fix plot ID
+#' 
+#' The default in BExIS is to not use leading 0's. I think this is stupid, so here is a function to fix it.
+fix.plotid = function(dataset){
+  require(myr)
+  plot_id = dataset$Plot_ID
+  plot.part = substr(plot_id,1,3)
+  num.part = substr(plot_id,4,5)
+  num.part = sapply(num.part, myr::Digit, 2)
+  plot_id = sprintf("%s%s", plot.part, num.part)
+  dataset$Plot_ID = plot_id
+  
+  return(dataset)
+}
+
 #' Main function for reading in x variables
 #' 
 #' @export setup.predictors
@@ -87,7 +140,7 @@ setup.predictors = function(sp.data, predictors.vec, predictors.paths){
     if (item == "landuse"  ) { run.vec[1] = 1 ; path.vec[1] = item.path }
     if (item == "climate"  ) { run.vec[2] = 1 ; path.vec[2] = item.path }
     if (item == "biotic"   ) { run.vec[3] = 1 ; path.vec[3] = item.path }
-    if (item == "frag"     ) { run.vec[4] = 1 ; path.vec[4] = item.path }
+    if (item == "cover"    ) { run.vec[4] = 1 ; path.vec[4] = item.path }
     if (item == "isolation") { run.vec[5] = 1 ; path.vec[5] = item.path }
     if (item == "survival" ) { run.vec[6] = 1 ; path.vec[6] = item.path }
     
@@ -101,7 +154,12 @@ setup.predictors = function(sp.data, predictors.vec, predictors.paths){
   # Set up land use data
   if (run.vec[1] == 1){
     # Read in land use data (grazing, mowing, fertilziation, LUI)
-    ludata = read.ludata(path.vec[1])  
+    ludata.part1 = read.ludata(path.vec[1])  
+    ludata.part2 = read.ludata("C:/docs/beplants/datasets/BExIS/landuse/19266_mod.csv")
+    #**# fix this to be a relative path at some point
+    
+    # Merge LUI with unstandardized data
+    ludata = merge(ludata.part1, ludata.part2)
     
     # Add dataset to list of datasets
     data.lst = append(data.lst, list(ludata))
@@ -126,12 +184,19 @@ setup.predictors = function(sp.data, predictors.vec, predictors.paths){
   }
   
   if (run.vec[4] == 1){
-    stop("This data set has not yet been set up")
     # Read in fragmentation data #**# CORINE or something from Thomas Nauss (or both?)
     # Corine is available, but Nauss's data that I don't have is theoretically better.
-    #frag = ETWAS
+    if (!file.exists(path.vec[4])){
+      raw.frag.file = "C:/docs/beplants/datasets/fragmentation/18148.csv"
+      message("Years in fragmentation data are hardwired, change if more years beyond 2008 - 2013 are desired")
+      start.year = 2008
+      end.year = 2013
+      make.frag(raw.frag.file,start.year, end.year, cover.path)
+    }
     
-    data.lst = append(data.lst, frag)
+    frag = read.csv(path.vec[4])
+    
+    data.lst = append(data.lst, list(frag))
   }
   
   if (run.vec[5] == 1){
@@ -141,7 +206,7 @@ setup.predictors = function(sp.data, predictors.vec, predictors.paths){
   
   if (run.vec[6] == 1){
     # Read in survival data
-    survival.file = "C:/docs/beplants/datasets/EJB/Rechenmatrix_AHS.csv"
+    survival.file = "C:/docs/beplants/datasets/plants/survival.csv" #Formerly named "Rechenmatrix_AHS.csv". Renamed to make file organization clearer.
     sudata = get.survival(survival.file, ludata)
     
     data.lst = append(data.lst, sudata)
@@ -255,7 +320,7 @@ set.up.biotic.predictors = function(sp.data){
 #' @param inpath the input path for the data
 #' @param dropcol Whether or not to drop the added empty columns to make the landscape square for spatialdemography
 #' @export read.sp.data
-read.sp.data = function(inpath, sp.lookup.file, dropcol = TRUE, plotyear.rows = TRUE){
+read.sp.data = function(inpath, sp.lookup.file, dropcol = TRUE, plotyear.rows = TRUE, write.data = T, out.file = "C:/docs/beplants/datasets/plants/PlantDataBE_rf.csv"){
   bedata = read.csv(inpath)
   if (dropcol == TRUE){
     bedata = bedata[ ,1:153] #Drop extra blank columns for spatialdemography
@@ -326,6 +391,10 @@ read.sp.data = function(inpath, sp.lookup.file, dropcol = TRUE, plotyear.rows = 
     }
   }
   
+  if (write.data == 1){
+    write.table(out.dat, file = out.file, row.names = F, sep = ",")
+  }
+  
   return(out.dat)
 }
 
@@ -350,24 +419,223 @@ read.ludata = function(inpath){
   # Add plotyear field  
   ludata$plotyear = sprintf("%s_%s",ludata$EP, ludata$Year)
   
-  #**# RECALCULATE LUI
-  
   # Drop extra columns
   ludata$Year = NULL
   ludata$EP = NULL
-  ludata$Exploratory = NULL
-  ludata$Area = NULL
-  ludata$N_org = NULL #Drop organic fertilizer
-  ludata$N_min = NULL #Drop mineral fertilizer
+  #ludata$Exploratory = NULL
+  #ludata$Area = NULL
+  #ludata$N_org = NULL #Drop organic fertilizer
+  #ludata$N_min = NULL #Drop mineral fertilizer
   
   #Drop standardized values
-  ludata$Fstd = NULL
-  ludata$Mstd = NULL
-  ludata$ Gstd = NULL
+  ludata$F_std = NULL
+  ludata$M_std = NULL
+  ludata$G_std = NULL
   
   return(ludata)  
 }
 
+#' Read in fragmentation data
+#' 
+#' Using Catrin Westphal & colleagues data
+#' Note: I saved the exploratories data as a .csv, to make it easier for me to import (because I don't know how to do tab delimiters in R, apparently)
+make.frag = function(frag.file, start.year, end.year, pc.file){
+  frag.file = "C:/docs/beplants/datasets/fragmentation/18148.csv"
+  pc.file = "C:/docs/beplants/datasets/fragmentation/grassland_PCs.csv"
+  start.year = 2008
+  end.year = 2013
+  
+  frag.dat = read.csv(frag.file)
+ 
+  # Fix plot ID
+  plot.part = sapply(frag.dat$EP_PLOTID, substr, 1,3)
+  num.part = sapply(frag.dat$EP_PLOTID, substr, 4,5)
+  num.part = sapply(num.part, myr::Digit, 2)
+  
+  plot.vec = c()
+  for (i in 1:length(plot.part)){
+    plot = sprintf("%s%s", plot.part[i], num.part[i])
+    plot.vec = c(plot.vec, plot)
+  }
+  
+  # Repeat plot values to join for each year for joining purposes
+  years = seq(start.year,end.year)
+  num.yrs = length(years)
+  plots = rep(plot.vec, num.yrs) #**# But you actually want to expand the whole data frame (next step)
+  years.vec = sort(rep(years, length(plot.vec)))
+  
+  plotyear = c()
+  for (i in 1:length(plots)){
+    this.plotyear = sprintf("%s_%s", plots[i], years.vec[i])
+    plotyear = c(plotyear, this.plotyear)
+  }
+
+  #**# Do PCA (or not) here, then expand out the data set that is being used
+  pca.out = frag.pca(frag.dat)
+  grass.dat = pca.out[[1]]
+  # output: list(grass.frag, grass.frag.loadings, center.means, explained.variation
+  
+  grass.dat.new = grass.dat
+  # Expand data frame using a for loop and a rbind.
+  for (i in 1:(num.yrs - 1)){
+    grass.dat.new = rbind(grass.dat.new, grass.dat)
+  }
+  
+  grass.dat.new = cbind(grass.dat.new, plotyear)
+  
+  # Write grass.dat.new to file to speed future reading
+  write.table(grass.dat.new, file = pc.file, sep = ",", row.names = F)
+  
+  return(grass.dat.new)
+  
+}
+
+#' Read in fragmentation data created by make.frag function
+#'
+#' @param pc.file File containing the results of a principle component analysis used to reduce multicollinearity.
+#' 
+read.frag = function(pc.file){
+  stop("This has not yet been scripted")
+  
+}
+
+#' Examine fragmentation data and consider variable reduction
+#' 
+#'  This function was used to explore the fragmentation data. Based on the exploration
+#'  I decided to compute principle component scores separately for each variable type
+#'  i.e. just for grassland scales or just for forest scales.
+#'  For my question, I have decided that I will start with just the grassland data;
+#'  if people disagree, I can add the other percent cover types.
+#'  
+#'  A message will tell how much variation is explained in these variables, but will not output it
+#'  But I should think about extracting the data as a list, with that information as part of the list
+#'  object.
+#'  
+#'  @return A list containing the first two grassland principle components, the means used for centering
+#'  and the amount of variation explained by the two principle components.
+#'  
+frag.pca = function(frag.dat, descriptive.analysis = 0){
+  
+  #convert plot id to row names
+  row.names(frag.dat) = frag.dat$EP_PLOTID
+  frag.dat$EP_PLOTID = NULL
+  
+  # Explore correlations across the entire data set of percent cover
+  ncol(frag.dat) #40 columns
+  pc.frag = princomp(frag.dat)
+  frag.sum = summary(pc.frag)
+  # 5 columns explain 90% of variation
+  # 14 columns explain 99% of variation in fragmentation
+  # I did not pursue this route, because I thought it would be too confusing to identify the effects of specific variables  
+  
+  # Separate data by type, and just do PCA by type
+  var.names = names(frag.dat)
+  
+  # Compute PC just for grassland scales, extracting variables using regex.
+  grassland = grep("G", var.names, value = T)
+  grass.dat = frag.dat[ , grassland]  
+  summary(grass.dat)
+  
+  g.pca = princomp(grass.dat)
+  g.summary = summary(g.pca)
+  g.pca$loadings
+
+  #check loadings
+  check.loadings(g.pca, grass.dat)
+  
+  # Repeat for forest (consider whether other landcovers should also be examined)
+  forest = grep("F", var.names, value = T)
+  for.dat = frag.dat[ , forest]
+  summary(for.dat)
+  
+  f.pca = princomp(for.dat)
+  f.summary = summary(f.pca)
+  f.pca$loadings
+  # Forest patterns are actually pretty similar to grassland results
+  
+  if (descriptive.analysis == 1){
+    # What do the bivariate plots look like?
+    require(psych)
+    # Just for grassland data
+    psych::pairs.panels(grass.dat)
+    
+    # For all data
+    tiff("frag.tif", height = 4500, width = 4500, compression = c("lzw"))
+    psych::pairs.panels(frag.dat)
+    dev.off()  
+  }
+  
+  # Set up data to return for further analysis
+  g.pca$scores
+  
+  # Return only the first 2 PC scores
+  grass.frag = g.pca$scores[ ,1:2]
+  
+  # Give more intuitive names
+  colnames(grass.frag) = c("Grass_PC1", "Grass_PC2")
+  
+  # Transform pc1 to increase with increasing grassland (why all the - signs???)
+  grass.frag[ , 1] = -grass.frag[ ,1]
+  
+  # Return loadings used for calculations
+  grass.frag.loadings = g.pca$loadings[ , 1:2]
+  # Reverse sign to get more logical values (i.e. get a component that increases with increasing grassland)
+  grass.frag.loadings[ , 1] = -grass.frag.loadings[ ,1]
+  
+  # Check that reversal of sign did not break calculations
+  check.loadings(g.pca, grass.dat, sign.check = 1)
+  
+  # Return the means used for centering the data (for repeatability purposes)
+  center.means = g.pca$center  
+  
+  # Return the amount of variation explained by the first two PC's.
+  #this calculation comes from: https://stat.ethz.ch/pipermail/r-help/2005-July/075040.html
+  # Quick visual check shows that it is correct, and logically, it makes sense.
+  all.explained.variation = g.pca$sdev^2/sum(g.pca$sdev^2)
+  explained.variation = all.explained.variation[1:2] # Limit to two PCs
+  
+  # Check if variation is over 80%, if not, question the intelligence
+  # of the decision to use only 2 PC's
+  cum.variation = sum(explained.variation)
+  if (cum.variation < 0.80){
+    warning("Explained variation of the chosen components is <80%. Think carefully about how you would like to proceed")
+  }
+  
+  return(list(grass.frag, grass.frag.loadings, center.means, explained.variation))
+}
+
+#' Quick check to make sure I understand PC loadings
+#' 
+#' 
+check.loadings = function(in.pca, in.dat, sign.check = 0){
+  
+  message("This function does not return an output or have side effects. it was run specifically to be worked through.")
+  message("also, some variables have been renamed since it was created. Watch for bugs!")
+  
+  # Check that loadings mean what I think they do.
+  pc1.load = in.pca$loadings[ ,1]
+  
+  if(sign.check == 1){ pc1.load = -pc1.load}
+  
+  dat1.vals = in.dat[1, ]
+  
+  # PC centers the data, so to match the inputs, you have to center the data before transforming it.
+  means = in.pca$center
+  
+  # Loop through and calculate the sum based on the different factor loadings
+  sum = 0
+  for (i in 1:length(pc1.load)){
+    new.val = pc1.load[i] * (dat1.vals[i] - means[i])
+    sum = sum + new.val
+  }
+  sum
+  #For grasslands with my data set: -0.2186011 # Uncentered: - 0.9793311
+  in.pca$scores #First score is -0.21860110 for the first PC score.
+  # And they match! Woo hoo!
+
+  # Sign check 0.2186011 - exactly opposite what it was, so should match if you just multiply the scores by a - . Seemed like that should work, but always nice to confirm.
+  
+}
 
 #' Read in (yearly) climate data
 #'
@@ -401,18 +669,23 @@ read.climate = function(inpath){
 
 #' Read in survival data
 #' 
-#' Also relevant as response traits to the metacommunity model
-#' Data from Helge, Ute, & Eva
+#' Convert survival data from Helge, Eva, & Ute into response traits for
+#' use with the spatialdemography model
 #' 
-#' Hmm, I've been using plotyear as a joining method, but these data aren't associated with a particular year.
-#' Need to add a second join to the main code to add the datasets that are not year specific
+#' @details Here, I read in the survival data and the land use data. For now,
+#' we just use survival at the 7th time point and LUI averaged from 2012 and 2013
+#' (but based on a global LUI). I averaged survival for all individuals within
+#' a plot to avoid pseudo-replication, and then did a linear regression of 
+#' survival probability vs. LUI.
+#' The parameter estimates and regressions are then returned from this function
+#' for use in the spatialdemography model.
 #' 
 #' @param survival.data The survival data from Helge, Ute, & Eva
 #' @param ludata Land use data from the Biodiversity Exploratories
 get.survival = function(survival.file, ludata){
-  # Read in survival data set
   
-  sudata = read.csv(survival.data)
+  # Read in survival data set
+  sudata = read.csv(survival.file)
   head(sudata)
   
   # Note: not sure how many replicates per species there are - I think the sample design works for their
@@ -430,13 +703,64 @@ get.survival = function(survival.file, ludata){
   su.sub = sudata[ ,keeps == 1]
   
   # Merge with landuse file (this requires remembering what year the study was carried out in - note some of the land use may have changed between years)
+    # Planted 2012 & monitored in 2013 - one of the landuse files I have is missing these data (but the other has it? Just not LUI)
+  lu.sub = ludata
+  years = substr(lu.sub$plotyear, 7, 10)
+  plots = substr(lu.sub$plotyear, 1, 5)
+  lu.sub$plot = plots
   
-  # Planted 2012 & monitored in 2013 - one of the landuse files I have is missing these data (but the other has it? Just not LUI)
+  # Subset ludata to 2012 & 2013
+  lu.sub = lu.sub[years == "2012" | years == "2013", ]
+  # Keep only LUI & plot
+  LUI = lu.sub$LUI
+  plots = lu.sub$plot
+  lui2012_13 = stats::aggregate(LUI,  by = list(plots), mean)
+  colnames(lui2012_13) = c("Plot", "LUI_mean_12_13")
   
-  # Estimate survival probabilities based on landuse type (logistic regression?)
+  # Merge LUI with plots
+  survival.data = merge(su.sub, lui2012_13, by = "Plot")
+  nrow(survival.data)
   
-  # output survival probabilities
+  # Get list of unique species in data set
+  species = as.character(unique(survival.data$Spec_Explo)) #130 species (~20 replicates per species, actually pretty nice! Except not per plot and not per land use type)
   
+  # Estimate survival probabilities based on landuse type
+  # Loop through species
+  for (i in 1:length(species)){
+    sp = species[i]
+    sp.survival = survival.data[survival.data$Spec_Explo == sp, ]
+    
+    #The commented-out analyses below here have a problem of psuedo-replication, where multiple individuals all share the same LUI
+    #plot(sp.survival$LUI_mean_12_13, sp.survival$survive7)
+    #warning("I didn't do the logistic regression correctly")
+    #logistic.regression = lm(sp.survival$survive7 ~ sp.survival$LUI_mean_12_13) #Oops, lm is the function for linear models, not logistic regression!
+    # marginally non-sig. with a decrease with increasing LUI
+    
+    #Less pseudo-replication if you aggregate survival by plot (mean survival).
+    # Drops the sample size, and would change it from a logistic regression.
+    for.aggregation = sp.survival[ , 4:5]
+    sp.survival.by.plot = aggregate(for.aggregation, list(sp.survival$Plot), mean)
+    nrow(sp.survival.by.plot)
+    # Drops sample size to 6 for species 1! Ouch! Nope: to 27. That's OK. Someone forgot how "head" works.
+    plot(sp.survival.by.plot$survive7 ~ sp.survival.by.plot$LUI_mean_12_13)
+    lm.out = lm(sp.survival.by.plot$survive7 ~ sp.survival.by.plot$LUI_mean_12_13)
+    summary(lm.out)
+    # Same parameter estimate as before, but now not significant, probably because of the reduced sample size.
+    parameters = lm.out$coefficients
+    
+    if (i == 1){
+      response.traits = data.frame(species = sp, intercept = parameters[1], estimate = parameters[2])
+    }else{
+      new.row = cbind(sp, parameters[1], parameters[2])
+      rownames(new.row) = NULL
+      colnames(new.row) = c("species", "intercept", "estimate")
+      response.traits = rbind(response.traits, new.row)
+    }
+         
+  }
+  
+  # output response traits for each examined species - include parameter estimate, intercept (n, pvalue and 95% CI?? I don't have a way of using those data right now.)
+  return(response.traits)
   
 }
 
@@ -887,6 +1211,90 @@ subset.by.traits = function(sp.data, trait.data, link, trait.lst, trait.vals.lst
   return(sp.data)
 }
 
+#' Reformat steffen's plant data
+#' 
+#' R code to put the plant data from Steffen Boch into the format needed by SpatialDemography
+#' NOTE: Prior to this code, the .csv was opened in Excel, split based on a ";" delimiter, then saved with a "," delimiter.
+#' Note: function never run as a function, but was run using the commented out text at the beginning.
+reformat.sb.plant.data = function(in.data, out.path){
+  
+  base.path = "C:/docs/beplants/datasets/plants/"
+  in.data = sprintf("%sboch_steffen/Grassland_Plants_08_13_SB.csv", base.path)
+  out.path = base.path
+  
+  # read in data
+  my.data = read.csv(in.data)
+  
+  # convert from factor
+  my.data$EP = as.character(my.data$EP)
+  my.data$Year = as.character(my.data$Year)
+  my.data$SpeciesID = as.character(my.data$SpeciesID)
+  my.data$Abundance = as.character(as.numeric(my.data$Abundance))
+  
+  # Get unique exploratories
+  expl = unique(as.character(my.data$EP))
+  
+  # Get number of years
+  years = unique(as.character(my.data$Year))
+  num.yrs = length(years)
+  message("no data for 2007, 2014, 2015")
+  
+  # Get number of species
+  species.name = unique(as.character(my.data$SpeciesID))
+  num.sp = length(species.name) #367
+
+  # Convert species to numeric ID's
+  species = seq(1,num.sp)
+  
+  # Write lookup file to allow conversion back to original species
+  lookup = data.frame(Species = species.name, SpeciesNumber = species)
+  out.file = sprintf("%sPlantDataBE_names.csv", out.path)
+  write.table(lookup, file = out.file, sep = ",", row.names = F)
+  
+  # Convert species in my.data to be numeric
+  
+  # Create a data frame with the required columns
+  # number of rows is equal to number of species * number of years
+  num.rows = num.sp * num.yrs
+  
+  out.df = data.frame(LifeStage = rep("Adults", num.rows), Species = rep(species.name, num.yrs),
+                      TimeStep = sort(rep(years, num.sp)))
+  
+  # Create Species_Year as row names
+  row.nams = c()
+  for (i in 1:nrow(out.df)){
+    this.nam = sprintf("%s_%s", out.df$Species[i], out.df$TimeStep[i])
+    row.nams = c(row.nams, this.nam)
+  }
+  rownames(out.df) = row.nams
+  
+  # Add a column for each plot
+  for (plot in expl){
+    out.df[[plot]] = rep(0, num.rows)
+  }
+  
+  #test = as.matrix(out.df)
+  
+  # Loop through data and populate data frame
+  for (i in 1:nrow(my.data)){
+    this.plot = my.data$EP[i]
+    this.year = my.data$Year[i]
+    this.sp  = my.data$SpeciesID[i]
+    this.abundance = my.data$Abundance[i]
+    sp.yr = sprintf("%s_%s", this.sp, this.year)
+    
+    out.df[sp.yr, this.plot] = this.abundance
+  }
+  
+  # Convert species names to be numeric
+  out.df$Species = rep(species, num.yrs)
+  
+  # Write table to file
+  data.file = sprintf("%sPlantDataBE.csv", out.path)
+  write.table(out.df, file = data.file, row.names = F, sep = ",")
+  
+}
+
 #' Read traits
 #' 
 #' Read in trait dataset from Helge. Note: in the future, you could make the trait source an input, and then use this for any chosen trait set.
@@ -1028,7 +1436,7 @@ year.subset = function(in.data, year){
 metacom.analysis = function(sp.data, year){
   require(metacom)
   require(myr)
-
+  
   # subset data to year & drop plotyear column
   my.data = year.subset(sp.data, year)
   
@@ -1053,7 +1461,7 @@ metacom.analysis = function(sp.data, year){
   # Drop missing species from plot
   col.test = apply(plot.data, c(2), sum)
   plot.data2 = plot.data[ , col.test != 0 ]
-    
+  
   # if species were dropped, issue warning with site ID's
   if (ncol(plot.data2) != ncol(plot.data)){
     dropped.sp = grep('\\b0\\b', col.test, value = TRUE)
@@ -1095,9 +1503,9 @@ metacom.analysis = function(sp.data, year){
   
   a = pairs(plot.data2) # FAIL - figure margins too large (i.e., it wants to make a BIG graph)
   # Do metacom's metacommunity analysis
-    # This takes a long time to run!
+  # This takes a long time to run!
   outputs = metacom::Metacommunity(plot.data2)
-
+  
   #**# Maybe try the metacom stuff with Helge's data?? Maybe it'll give better results? I'm a little concerned about data quailty, given some of the perfect correlations.
   
   # Looks like more likely to get species co-occuring than anti-occurring. But... biotic filter? Or facilitation? or just convergent habitat requirements?

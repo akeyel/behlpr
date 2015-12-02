@@ -1,16 +1,5 @@
-## Supporting analysis for Keyel et al. in prep: "TITLE GOES HERE"
-
-## Notes from meeting with Kerstin:
-# Try to check model fit after 7 years
-# Can use Helge's data as a check on species completeness of BE plots (see what else is present in plots)
-# Think about virtual ecologist type approaches
-# Check with Katrin Westphal and Stephen Dewenter about multiscale data
-
-#**# To move:
-# Kevin Darras - recording birdsongs in Indonesia - might we worth talking about soundscape type stuff
-# Kerstin will not be applying for Exploratories funding on the next round (trying to scale back)
-# For report - it was written for 24 mo, we only got 19
-# Report should include highlight of findings and people who interacted on it
+## Supporting analysis for Keyel et al. in prep: Predicting grassland community
+#    changes in response to changes in climate and land management
 
 ## Index to data analyses
 # One analysis with just abiotic factors
@@ -44,9 +33,16 @@ setwd(spath)
 
 # Set up inputs
 # Species Data
-sp.file = sprintf("%s/combined/SpeciesDataBE.csv", dpath)
-sp.lookup.file = sprintf("%s/combined/species_lookup.csv", dpath)
-sp.data = read.sp.data(sp.file, sp.lookup.file)
+sp.file = sprintf("%s/plants/PlantDataBE.csv", dpath)
+sp.lookup.file = sprintf("%s/plants/PlantDataBE_names.csv", dpath)
+sp.file.reformatted = sprintf("%s/plants/PlantDataBE_rf.csv", dpath)
+# only reformat data file if a reformatted file does not already exist.
+if (!file.exists(sp.file.reformatted)){
+  sp.data = read.sp.data(sp.file, sp.lookup.file)  
+}else{
+  sp.data = read.csv(sp.file.reformatted)
+}
+
 sp.names = names(sp.data[2:length(sp.data)]) # Drop plotyear column, but retain all other species names.
 
 # Do metacom analysis
@@ -55,6 +51,7 @@ if (give.messages == 1){ metacom.analysis.notes() }
 
 # Read in trait data
 trait.data = read.traits()
+#**# This fails now, I moved the files somewhere else.
 
 #**# Add an indicator for rare species - so that rarity can be taken into account
 #**# Consider dropping rare species (I dealt with this in the descriptives, too, so need to figure out if, where, and when to code this.)
@@ -104,12 +101,13 @@ for (analysis.type in analysis.vec){
   }  
 
   # Abiotic variables
-  lu.path = sprintf("%sBExIS/landuse/16029.csv", dpath)
-  config.path = stop("This variable is not yet available")
+  lu.path = sprintf("%sBExIS/landuse/LUI_tool_cleaned.csv", dpath)
+  cover.path = sprintf("%sfragmentation/grassland_PCs.csv", dpath)
+  #config.path = stop("This variable is not yet available")
   #abiotic.vec = c("landuse", "configuration")
-  abiotic.vec = c("landuse")
-  #abiotic.paths = c(lu.path, config.path)
-  abiotic.paths= c(lu.path)
+  abiotic.vec = c("landuse", "cover")
+  abiotic.paths = c(lu.path, cover.path)
+  #abiotic.paths= c(lu.path)
   
 #   # Biotic variables
 #   biotic.vec = biotic.paths = c() # Create empty variables in case no biotic variables
