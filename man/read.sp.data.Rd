@@ -3,7 +3,9 @@
 \alias{read.sp.data}
 \title{Read in be_data file}
 \usage{
-read.sp.data(inpath, sp.lookup.file, dropcol = TRUE, plotyear.rows = TRUE)
+read.sp.data(inpath, sp.lookup.file, dropcol = TRUE, plotyear.rows = TRUE,
+  write.data = T,
+  out.file = "C:/docs/beplants/datasets/plants/PlantDataBE_rf.csv")
 }
 \arguments{
 \item{inpath}{the input path for the data}

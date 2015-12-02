@@ -3,7 +3,7 @@
 \alias{do.sdm}
 \title{A main function to run the Species Distribution Model}
 \usage{
-do.sdm(sdm.data, my.index, col.index, sdm.type)
+do.sdm(sdm.data, my.index, col.index, sdm.type, colonization.only = 0)
 }
 \arguments{
 \item{my.data}{}
@@ -16,6 +16,11 @@ type 2+ correspond to different suites of independent variables}
 \item{col.index}{Contains indicators for whether or not to include the column as a predictor variable.}
 
 \item{sdm.type}{1 = basic sdm (nothing fancy), 2 = uses biomod}
+
+\item{colonization.only}{An indicator for whether to restrict the data set to only
+newly colonized plots #**# is this really a good idea? Seemed like one on the surface
+but not it seems stupid - you lose stable populations and parts of the core distribution.
+But you gain a weak attempt to look at dispersal limitation.}
 }
 \description{
 A main function to run the Species Distribution Model
