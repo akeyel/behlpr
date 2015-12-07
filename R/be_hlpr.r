@@ -111,14 +111,14 @@ read.8plot.data = function(plots.file){
 #' Fix plot ID
 #' 
 #' The default in BExIS is to not use leading 0's. I think this is stupid, so here is a function to fix it.
-fix.plotid = function(dataset){
+fix.plotid = function(dataset, plotid.field = "Plot_ID"){
   require(myr)
-  plot_id = dataset$Plot_ID
+  plot_id = dataset[[plotid.field]]
   plot.part = substr(plot_id,1,3)
   num.part = substr(plot_id,4,5)
   num.part = sapply(num.part, myr::Digit, 2)
   plot_id = sprintf("%s%s", plot.part, num.part)
-  dataset$Plot_ID = plot_id
+  dataset[[plotid.field]] = plot_id
   
   return(dataset)
 }
@@ -126,7 +126,7 @@ fix.plotid = function(dataset){
 #' Main function for reading in x variables
 #' 
 #' @export setup.predictors
-setup.predictors = function(sp.data, predictors.vec, predictors.paths){
+setup.predictors = function(sp.data, predictors.vec, predictors.paths, start.year = 2008, end.year = 2013){
   
   #**# Can move this into a sub-function to save space
   # Convert predictors.vec to numeric vector (should I just start with a numeric vector?)
@@ -140,7 +140,7 @@ setup.predictors = function(sp.data, predictors.vec, predictors.paths){
     if (item == "landuse"  ) { run.vec[1] = 1 ; path.vec[1] = item.path }
     if (item == "climate"  ) { run.vec[2] = 1 ; path.vec[2] = item.path }
     if (item == "biotic"   ) { run.vec[3] = 1 ; path.vec[3] = item.path }
-    if (item == "cover"    ) { run.vec[4] = 1 ; path.vec[4] = item.path }
+    if (item == "frag"    ) { run.vec[4] = 1 ; path.vec[4] = item.path }
     if (item == "isolation") { run.vec[5] = 1 ; path.vec[5] = item.path }
     if (item == "survival" ) { run.vec[6] = 1 ; path.vec[6] = item.path }
     
@@ -187,11 +187,9 @@ setup.predictors = function(sp.data, predictors.vec, predictors.paths){
     # Read in fragmentation data #**# CORINE or something from Thomas Nauss (or both?)
     # Corine is available, but Nauss's data that I don't have is theoretically better.
     if (!file.exists(path.vec[4])){
-      raw.frag.file = "C:/docs/beplants/datasets/fragmentation/18148.csv"
-      message("Years in fragmentation data are hardwired, change if more years beyond 2008 - 2013 are desired")
-      start.year = 2008
-      end.year = 2013
-      make.frag(raw.frag.file,start.year, end.year, cover.path)
+      frag.file.1 = "C:/docs/beplants/datasets/fragmentation/18148.csv"
+      frag.file.2 = "C:/docs/beplants/datasets/fragmentation/insectscales.csv"
+      make.frag(frag.file.1, frag.file.2,start.year, end.year, path.vec[4])
     }
     
     frag = read.csv(path.vec[4])
@@ -205,6 +203,7 @@ setup.predictors = function(sp.data, predictors.vec, predictors.paths){
   }
   
   if (run.vec[6] == 1){
+    stop("This needs to be moved to another location in the code, this data set is being used for response traits only!")
     # Read in survival data
     survival.file = "C:/docs/beplants/datasets/plants/survival.csv" #Formerly named "Rechenmatrix_AHS.csv". Renamed to make file organization clearer.
     sudata = get.survival(survival.file, ludata)
@@ -435,69 +434,153 @@ read.ludata = function(inpath){
   return(ludata)  
 }
 
+#' Notes on insectscales processing
+#'
+prossesing.notes = function(){
+message("I removed all highlighting, deleted the first two rows,
+        renamed EP_Plot_ID to EP_PLOTID to match the other BExIS datasets,
+        deleted AEG10 and replaced it AEG10 with AEG10new, and named it
+        insectscales.csv") 
+}
+  
 #' Read in fragmentation data
 #' 
 #' Using Catrin Westphal & colleagues data
 #' Note: I saved the exploratories data as a .csv, to make it easier for me to import (because I don't know how to do tab delimiters in R, apparently)
-make.frag = function(frag.file, start.year, end.year, pc.file){
-  frag.file = "C:/docs/beplants/datasets/fragmentation/18148.csv"
-  pc.file = "C:/docs/beplants/datasets/fragmentation/grassland_PCs.csv"
-  start.year = 2008
-  end.year = 2013
+make.frag = function(frag.file.1, frag.file.2, start.year, end.year, pc.file.1, pc.file.2, frag.out){
+  frag.file.1 = "C:/docs/beplants/datasets/fragmentation/18148.csv"
+  frag.file.2 = "C:/docs/beplants/datasets/fragmentation/insectscales.csv"
+  #frag.file = "C:/docs/beplants/datasets/fragmentation/18148.csv"
+  pc.file.1 = "C:/docs/beplants/datasets/fragmentation/grassland_PCs.csv"
+  pc.file.2 = "C:/docs/beplants/datasets/fragmentation/edge_density_PCs.csv"
+  frag.out = "C:/docs/beplants/datasets/fragmentation/frag_data_for_analysis.csv"
+  #start.year = 2008
+  #end.year = 2013
   
+  frag1 = frag.analysis(frag.file.1, pc.file.1, "grassland")
+  frag2 = frag.analysis(frag.file.2, pc.file.2, "edgedensity")
+  frag = merge(frag1, frag2, by = "plotyear")
+  write.table(frag, file = frag.out, , sep = ",", row.names = F)
+
+  #return(frag) #**# desirable? or just read in from file?
+}
+
+#' Function to process fragmentation data
+#' 
+frag.analysis = function(frag.file, pc.file, data.type){
+
   frag.dat = read.csv(frag.file)
  
   # Fix plot ID
-  plot.part = sapply(frag.dat$EP_PLOTID, substr, 1,3)
-  num.part = sapply(frag.dat$EP_PLOTID, substr, 4,5)
-  num.part = sapply(num.part, myr::Digit, 2)
-  
-  plot.vec = c()
-  for (i in 1:length(plot.part)){
-    plot = sprintf("%s%s", plot.part[i], num.part[i])
-    plot.vec = c(plot.vec, plot)
-  }
+  frag.dat = fix.plotid(frag.dat, "EP_PLOTID")
   
   # Repeat plot values to join for each year for joining purposes
   years = seq(start.year,end.year)
   num.yrs = length(years)
-  plots = rep(plot.vec, num.yrs) #**# But you actually want to expand the whole data frame (next step)
+  plots = rep(frag.dat$EP_PLOTID, num.yrs)
   years.vec = sort(rep(years, length(plot.vec)))
   
-  plotyear = c()
-  for (i in 1:length(plots)){
-    this.plotyear = sprintf("%s_%s", plots[i], years.vec[i])
-    plotyear = c(plotyear, this.plotyear)
-  }
+  plotyear = sprintf("%s_%s", plots, years.vec)
 
-  #**# Do PCA (or not) here, then expand out the data set that is being used
-  pca.out = frag.pca(frag.dat)
-  grass.dat = pca.out[[1]]
+  #Do PCA
+  pca.out = frag.pca(frag.dat, data.type)
+  data.out = pca.out[[1]]
   # output: list(grass.frag, grass.frag.loadings, center.means, explained.variation
   
-  grass.dat.new = grass.dat
+  data.new = data.out
+  
+  # Expand out the data set in order to have a row for each year
   # Expand data frame using a for loop and a rbind.
   for (i in 1:(num.yrs - 1)){
-    grass.dat.new = rbind(grass.dat.new, grass.dat)
+    data.new = rbind(data.new, data.out)
   }
   
-  grass.dat.new = cbind(grass.dat.new, plotyear)
+  data.new = cbind(plotyear, data.new)
   
-  # Write grass.dat.new to file to speed future reading
-  write.table(grass.dat.new, file = pc.file, sep = ",", row.names = F)
+  # Write data to file to speed future reading
+  write.table(data.new, file = pc.file, sep = ",", row.names = F)
   
-  return(grass.dat.new)
-  
+  return(data.new)
 }
 
-#' Read in fragmentation data created by make.frag function
-#'
-#' @param pc.file File containing the results of a principle component analysis used to reduce multicollinearity.
+
+#' Reduce number of variables for highly-correlated multiscale data
 #' 
-read.frag = function(pc.file){
-  stop("This has not yet been scripted")
+#' 
+frag.pca = function(frag.dat, data.type){
+  #convert plot id to row names
+  row.names(frag.dat) = frag.dat$EP_PLOTID
+  frag.dat$EP_PLOTID = NULL
   
+  # Get names of variables
+  var.names = names(frag.dat)
+  
+  # Separate data by type, and just do PCA by type
+  if (data.type == "grassland"){
+    # Compute PC just for grassland scales, extracting variables using regex.
+    grassland = grep("G", var.names, value = T)
+    subset = frag.dat[ , grassland]  
+  }
+  
+  if (data.type == "edgedensity"){
+    # Extract edge density data
+    edgedensity = grep("ED", var.names, value = T)
+    
+    # Drop edge densities that do not correspond to the scales at which we have the grassland cover
+    keeps = c(0,1,1,0,1,0,1,0,1)
+    edgedensity = edgedensity[keeps == 1]
+    subset = frag.dat[ , edgedensity]
+  }
+    
+  frag.pca = princomp(subset)
+
+  # Return only the first 2 PC scores
+  pc.scores = frag.pca$scores[ ,1:2]
+  
+  # Return loadings used for calculations
+  pc.loadings = frag.pca$loadings[ , 1:2]
+
+  # Return the means used for centering the data (for repeatability purposes)
+  center.means = frag.pca$center  
+
+  # Return the amount of variation explained by the first two PC's.
+  #this calculation comes from: https://stat.ethz.ch/pipermail/r-help/2005-July/075040.html
+  # Quick visual check shows that it is correct, and logically, it makes sense.
+  all.explained.variation = frag.pca$sdev^2/sum(frag.pca$sdev^2)
+  explained.variation = all.explained.variation[1:2] # Limit to two PCs
+  
+  # Check if variation is over 80%, if not, question the intelligence
+  # of the decision to use only 2 PC's
+  cum.variation = sum(explained.variation)
+  if (cum.variation < 0.80){
+    warning(sprintf("Explained variation by the first two PC's for dataset %s is <80%. Think carefully about how you would like to proceed", data.type))
+  }
+  
+  if (data.type == "grassland"){
+    # Give more intuitive names
+    colnames(pc.scores) = c("Grass_PC1", "Grass_PC2")
+    
+    # Transform pc1 to increase with increasing grassland (why all the - signs???)
+    pc.scores[ , 1] = -pc.scores[ ,1]
+
+    # Reverse sign to get more logical values (i.e. get a component that increases with increasing grassland)
+    pc.loadings[ , 1] = -pc.loadings[ , 1]
+  }
+    
+  if (data.type == "edgedensity"){
+    # Give more intuitive names
+    colnames(pc.scores) = c("EdgeDensity_PC1", "EdgeDensity_PC2")
+
+    # Transform pc1 to increase with increasing grassland (why all the - signs???)
+    pc.scores[ , 1] = -pc.scores[ ,1]
+    
+    # Reverse sign to get more logical values (i.e. get a component that increases with increasing grassland)
+    pc.loadings[ , 1] = -pc.loadings[ , 1]
+  }
+  
+  return(list(pc.scores, pc.loadings, center.means, explained.variation))
 }
+
 
 #' Examine fragmentation data and consider variable reduction
 #' 
@@ -514,7 +597,7 @@ read.frag = function(pc.file){
 #'  @return A list containing the first two grassland principle components, the means used for centering
 #'  and the amount of variation explained by the two principle components.
 #'  
-frag.pca = function(frag.dat, descriptive.analysis = 0){
+frag.pca.old = function(frag.dat, descriptive.analysis = 0){
   
   #convert plot id to row names
   row.names(frag.dat) = frag.dat$EP_PLOTID

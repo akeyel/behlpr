@@ -3,7 +3,8 @@
 \alias{setup.predictors}
 \title{Main function for reading in x variables}
 \usage{
-setup.predictors(sp.data, predictors.vec, predictors.paths)
+setup.predictors(sp.data, predictors.vec, predictors.paths, start.year = 2008,
+  end.year = 2013)
 }
 \description{
 Main function for reading in x variables

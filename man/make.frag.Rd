@@ -3,7 +3,8 @@
 \alias{make.frag}
 \title{Read in fragmentation data}
 \usage{
-make.frag(frag.file, start.year, end.year, pc.file)
+make.frag(frag.file.1, frag.file.2, start.year, end.year, pc.file.1, pc.file.2,
+  frag.out)
 }
 \description{
 Using Catrin Westphal & colleagues data

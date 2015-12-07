@@ -3,7 +3,7 @@
 \alias{merge.data}
 \title{Merge data}
 \usage{
-merge.data(data.lst, id.field)
+\method{merge}{data}(data.lst, id.field)
 }
 \arguments{
 \item{data.lst}{a list of data files to be merged}

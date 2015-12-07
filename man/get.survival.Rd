@@ -11,11 +11,16 @@ get.survival(survival.file, ludata)
 \item{ludata}{Land use data from the Biodiversity Exploratories}
 }
 \description{
-Also relevant as response traits to the metacommunity model
-Data from Helge, Ute, & Eva
+Convert survival data from Helge, Eva, & Ute into response traits for
+use with the spatialdemography model
 }
 \details{
-Hmm, I've been using plotyear as a joining method, but these data aren't associated with a particular year.
-Need to add a second join to the main code to add the datasets that are not year specific
+Here, I read in the survival data and the land use data. For now,
+we just use survival at the 7th time point and LUI averaged from 2012 and 2013
+(but based on a global LUI). I averaged survival for all individuals within
+a plot to avoid pseudo-replication, and then did a linear regression of
+survival probability vs. LUI.
+The parameter estimates and regressions are then returned from this function
+for use in the spatialdemography model.
 }
 

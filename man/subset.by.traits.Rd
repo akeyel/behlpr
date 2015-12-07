@@ -3,7 +3,7 @@
 \alias{subset.by.traits}
 \title{Subset by traits}
 \usage{
-subset.by.traits(sp.data, trait.data, link, trait.lst, trait.vals.lst)
+\method{subset}{by.traits}(sp.data, trait.data, link, trait.lst, trait.vals.lst)
 }
 \description{
 Plan is to give an option to subset the dataset based on preselected traits
