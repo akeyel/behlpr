@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+
+<meta charset="utf-8">
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta name="generator" content="pandoc" />
+
+<meta name="author" content="Alexander C. Keyel skeyel@gmail.com" />
+
+<meta name="date" content="2015-12-15" />
+
+<title>Predicting grassland community changes in response to changes in climate and land management</title>
+
+
+
+
+<link href="data:text/css,body%20%7B%0A%20%20background%2Dcolor%3A%20%23fff%3B%0A%20%20margin%3A%201em%20auto%3B%0A%20%20max%2Dwidth%3A%20700px%3B%0A%20%20overflow%3A%20visible%3B%0A%20%20padding%2Dleft%3A%202em%3B%0A%20%20padding%2Dright%3A%202em%3B%0A%20%20font%2Dfamily%3A%20%22Open%20Sans%22%2C%20%22Helvetica%20Neue%22%2C%20Helvetica%2C%20Arial%2C%20sans%2Dserif%3B%0A%20%20font%2Dsize%3A%2014px%3B%0A%20%20line%2Dheight%3A%201%2E35%3B%0A%7D%0A%0A%23header%20%7B%0A%20%20text%2Dalign%3A%20center%3B%0A%7D%0A%0A%23TOC%20%7B%0A%20%20clear%3A%20both%3B%0A%20%20margin%3A%200%200%2010px%2010px%3B%0A%20%20padding%3A%204px%3B%0A%20%20width%3A%20400px%3B%0A%20%20border%3A%201px%20solid%20%23CCCCCC%3B%0A%20%20border%2Dradius%3A%205px%3B%0A%0A%20%20background%2Dcolor%3A%20%23f6f6f6%3B%0A%20%20font%2Dsize%3A%2013px%3B%0A%20%20line%2Dheight%3A%201%2E3%3B%0A%7D%0A%20%20%23TOC%20%2Etoctitle%20%7B%0A%20%20%20%20font%2Dweight%3A%20bold%3B%0A%20%20%20%20font%2Dsize%3A%2015px%3B%0A%20%20%20%20margin%2Dleft%3A%205px%3B%0A%20%20%7D%0A%0A%20%20%23TOC%20ul%20%7B%0A%20%20%20%20padding%2Dleft%3A%2040px%3B%0A%20%20%20%20margin%2Dleft%3A%20%2D1%2E5em%3B%0A%20%20%20%20margin%2Dtop%3A%205px%3B%0A%20%20%20%20margin%2Dbottom%3A%205px%3B%0A%20%20%7D%0A%20%20%23TOC%20ul%20ul%20%7B%0A%20%20%20%20margin%2Dleft%3A%20%2D2em%3B%0A%20%20%7D%0A%20%20%23TOC%20li%20%7B%0A%20%20%20%20line%2Dheight%3A%2016px%3B%0A%20%20%7D%0A%0Atable%20%7B%0A%20%20margin%3A%201em%20auto%3B%0A%20%20border%2Dwidth%3A%201px%3B%0A%20%20border%2Dcolor%3A%20%23DDDDDD%3B%0A%20%20border%2Dstyle%3A%20outset%3B%0A%20%20border%2Dcollapse%3A%20collapse%3B%0A%7D%0Atable%20th%20%7B%0A%20%20border%2Dwidth%3A%202px%3B%0A%20%20padding%3A%205px%3B%0A%20%20border%2Dstyle%3A%20inset%3B%0A%7D%0Atable%20td%20%7B%0A%20%20border%2Dwidth%3A%201px%3B%0A%20%20border%2Dstyle%3A%20inset%3B%0A%20%20line%2Dheight%3A%2018px%3B%0A%20%20padding%3A%205px%205px%3B%0A%7D%0Atable%2C%20table%20th%2C%20table%20td%20%7B%0A%20%20border%2Dleft%2Dstyle%3A%20none%3B%0A%20%20border%2Dright%2Dstyle%3A%20none%3B%0A%7D%0Atable%20thead%2C%20table%20tr%2Eeven%20%7B%0A%20%20background%2Dcolor%3A%20%23f7f7f7%3B%0A%7D%0A%0Ap%20%7B%0A%20%20margin%3A%200%2E5em%200%3B%0A%7D%0A%0Ablockquote%20%7B%0A%20%20background%2Dcolor%3A%20%23f6f6f6%3B%0A%20%20padding%3A%200%2E25em%200%2E75em%3B%0A%7D%0A%0Ahr%20%7B%0A%20%20border%2Dstyle%3A%20solid%3B%0A%20%20border%3A%20none%3B%0A%20%20border%2Dtop%3A%201px%20solid%20%23777%3B%0A%20%20margin%3A%2028px%200%3B%0A%7D%0A%0Adl%20%7B%0A%20%20margin%2Dleft%3A%200%3B%0A%7D%0A%20%20dl%20dd%20%7B%0A%20%20%20%20margin%2Dbottom%3A%2013px%3B%0A%20%20%20%20margin%2Dleft%3A%2013px%3B%0A%20%20%7D%0A%20%20dl%20dt%20%7B%0A%20%20%20%20font%2Dweight%3A%20bold%3B%0A%20%20%7D%0A%0Aul%20%7B%0A%20%20margin%2Dtop%3A%200%3B%0A%7D%0A%20%20ul%20li%20%7B%0A%20%20%20%20list%2Dstyle%3A%20circle%20outside%3B%0A%20%20%7D%0A%20%20ul%20ul%20%7B%0A%20%20%20%20margin%2Dbottom%3A%200%3B%0A%20%20%7D%0A%0Apre%2C%20code%20%7B%0A%20%20background%2Dcolor%3A%20%23f7f7f7%3B%0A%20%20border%2Dradius%3A%203px%3B%0A%20%20color%3A%20%23333%3B%0A%7D%0Apre%20%7B%0A%20%20white%2Dspace%3A%20pre%2Dwrap%3B%20%20%20%20%2F%2A%20Wrap%20long%20lines%20%2A%2F%0A%20%20border%2Dradius%3A%203px%3B%0A%20%20margin%3A%205px%200px%2010px%200px%3B%0A%20%20padding%3A%2010px%3B%0A%7D%0Apre%3Anot%28%5Bclass%5D%29%20%7B%0A%20%20background%2Dcolor%3A%20%23f7f7f7%3B%0A%7D%0A%0Acode%20%7B%0A%20%20font%2Dfamily%3A%20Consolas%2C%20Monaco%2C%20%27Courier%20New%27%2C%20monospace%3B%0A%20%20font%2Dsize%3A%2085%25%3B%0A%7D%0Ap%20%3E%20code%2C%20li%20%3E%20code%20%7B%0A%20%20padding%3A%202px%200px%3B%0A%7D%0A%0Adiv%2Efigure%20%7B%0A%20%20text%2Dalign%3A%20center%3B%0A%7D%0Aimg%20%7B%0A%20%20background%2Dcolor%3A%20%23FFFFFF%3B%0A%20%20padding%3A%202px%3B%0A%20%20border%3A%201px%20solid%20%23DDDDDD%3B%0A%20%20border%2Dradius%3A%203px%3B%0A%20%20border%3A%201px%20solid%20%23CCCCCC%3B%0A%20%20margin%3A%200%205px%3B%0A%7D%0A%0Ah1%20%7B%0A%20%20margin%2Dtop%3A%200%3B%0A%20%20font%2Dsize%3A%2035px%3B%0A%20%20line%2Dheight%3A%2040px%3B%0A%7D%0A%0Ah2%20%7B%0A%20%20border%2Dbottom%3A%204px%20solid%20%23f7f7f7%3B%0A%20%20padding%2Dtop%3A%2010px%3B%0A%20%20padding%2Dbottom%3A%202px%3B%0A%20%20font%2Dsize%3A%20145%25%3B%0A%7D%0A%0Ah3%20%7B%0A%20%20border%2Dbottom%3A%202px%20solid%20%23f7f7f7%3B%0A%20%20padding%2Dtop%3A%2010px%3B%0A%20%20font%2Dsize%3A%20120%25%3B%0A%7D%0A%0Ah4%20%7B%0A%20%20border%2Dbottom%3A%201px%20solid%20%23f7f7f7%3B%0A%20%20margin%2Dleft%3A%208px%3B%0A%20%20font%2Dsize%3A%20105%25%3B%0A%7D%0A%0Ah5%2C%20h6%20%7B%0A%20%20border%2Dbottom%3A%201px%20solid%20%23ccc%3B%0A%20%20font%2Dsize%3A%20105%25%3B%0A%7D%0A%0Aa%20%7B%0A%20%20color%3A%20%230033dd%3B%0A%20%20text%2Ddecoration%3A%20none%3B%0A%7D%0A%20%20a%3Ahover%20%7B%0A%20%20%20%20color%3A%20%236666ff%3B%20%7D%0A%20%20a%3Avisited%20%7B%0A%20%20%20%20color%3A%20%23800080%3B%20%7D%0A%20%20a%3Avisited%3Ahover%20%7B%0A%20%20%20%20color%3A%20%23BB00BB%3B%20%7D%0A%20%20a%5Bhref%5E%3D%22http%3A%22%5D%20%7B%0A%20%20%20%20text%2Ddecoration%3A%20underline%3B%20%7D%0A%20%20a%5Bhref%5E%3D%22https%3A%22%5D%20%7B%0A%20%20%20%20text%2Ddecoration%3A%20underline%3B%20%7D%0A%0A%2F%2A%20Class%20described%20in%20https%3A%2F%2Fbenjeffrey%2Ecom%2Fposts%2Fpandoc%2Dsyntax%2Dhighlighting%2Dcss%0A%20%20%20Colours%20from%20https%3A%2F%2Fgist%2Egithub%2Ecom%2Frobsimmons%2F1172277%20%2A%2F%0A%0Acode%20%3E%20span%2Ekw%20%7B%20color%3A%20%23555%3B%20font%2Dweight%3A%20bold%3B%20%7D%20%2F%2A%20Keyword%20%2A%2F%0Acode%20%3E%20span%2Edt%20%7B%20color%3A%20%23902000%3B%20%7D%20%2F%2A%20DataType%20%2A%2F%0Acode%20%3E%20span%2Edv%20%7B%20color%3A%20%2340a070%3B%20%7D%20%2F%2A%20DecVal%20%28decimal%20values%29%20%2A%2F%0Acode%20%3E%20span%2Ebn%20%7B%20color%3A%20%23d14%3B%20%7D%20%2F%2A%20BaseN%20%2A%2F%0Acode%20%3E%20span%2Efl%20%7B%20color%3A%20%23d14%3B%20%7D%20%2F%2A%20Float%20%2A%2F%0Acode%20%3E%20span%2Ech%20%7B%20color%3A%20%23d14%3B%20%7D%20%2F%2A%20Char%20%2A%2F%0Acode%20%3E%20span%2Est%20%7B%20color%3A%20%23d14%3B%20%7D%20%2F%2A%20String%20%2A%2F%0Acode%20%3E%20span%2Eco%20%7B%20color%3A%20%23888888%3B%20font%2Dstyle%3A%20italic%3B%20%7D%20%2F%2A%20Comment%20%2A%2F%0Acode%20%3E%20span%2Eot%20%7B%20color%3A%20%23007020%3B%20%7D%20%2F%2A%20OtherToken%20%2A%2F%0Acode%20%3E%20span%2Eal%20%7B%20color%3A%20%23ff0000%3B%20font%2Dweight%3A%20bold%3B%20%7D%20%2F%2A%20AlertToken%20%2A%2F%0Acode%20%3E%20span%2Efu%20%7B%20color%3A%20%23900%3B%20font%2Dweight%3A%20bold%3B%20%7D%20%2F%2A%20Function%20calls%20%2A%2F%20%0Acode%20%3E%20span%2Eer%20%7B%20color%3A%20%23a61717%3B%20background%2Dcolor%3A%20%23e3d2d2%3B%20%7D%20%2F%2A%20ErrorTok%20%2A%2F%0A%0A" rel="stylesheet" type="text/css" />
+
+</head>
+
+<body>
+
+
+
+<div id="header">
+<h1 class="title">Predicting grassland community changes in response to changes in climate and land management</h1>
+<h4 class="author"><em>Alexander C. Keyel <a href="mailto:skeyel@gmail.com">skeyel@gmail.com</a></em></h4>
+<h4 class="date"><em>2015-12-15</em></h4>
+</div>
+
+
+<div id="supporting-analysis-for-keyel-et-al.-in-prep" class="section level1">
+<h1>Supporting analysis for Keyel et al. in prep</h1>
+<div id="code-overview" class="section level2">
+<h2>Code Overview</h2>
+<ul>
+<li>Load required packages<br /></li>
+<li>Set up path information &amp; indicator variables<br /></li>
+<li>Set up species data<br /></li>
+<li>Do optional analyses<br /></li>
+<li>Set up predictor variables<br /></li>
+<li>Do some basic descriptive analyses<br /></li>
+<li>Run Species Distribution Model<br /></li>
+<li>Run SpatialDemography model</li>
+</ul>
+</div>
+<div id="annoying-messages-i-dont-know-how-to-turn-off" class="section level2">
+<h2>Annoying messages I don’t know how to turn off</h2>
+<pre><code>## Loading behlpr
+## Loading required package: Matrix
+## 
+## Attaching package: 'myr'
+## 
+## The following object is masked from 'package:spatialdemography':
+## 
+##     Digit</code></pre>
+</div>
+<div id="analysis-information" class="section level2">
+<h2>Analysis information</h2>
+<pre><code>## [1] &quot;Analysis years: 2008 - 2013&quot;</code></pre>
+<pre><code>## [1] 367</code></pre>
+</div>
+<div id="principle-component-analysis-results" class="section level2">
+<h2>Principle Component Analysis Results</h2>
+<pre><code>## [1] &quot;landuse&quot; &quot;frag&quot;</code></pre>
+<pre><code>## [1] &quot;Save Point 1 reached; last updated 2015-12-12&quot;</code></pre>
+</div>
+<div id="basic-descriptive-analyses" class="section level2">
+<h2>Basic Descriptive analyses</h2>
+</div>
+<div id="species-distribution-model-analyses" class="section level2">
+<h2>Species Distribution Model Analyses</h2>
+<pre><code>## Warning in dir.create(opath, recursive = T):
+## '..\..\drafts\BE_data_paper\R_outputs\\analysis' already exists</code></pre>
+<p><img src="data:image/png;base64,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" /></p>
+</div>
+<div id="spatialdemography-model-results-needs-fixing" class="section level2">
+<h2>SpatialDemography Model Results (NEEDS FIXING)</h2>
+</div>
+</div>
+
+
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>

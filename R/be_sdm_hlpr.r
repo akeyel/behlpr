@@ -17,9 +17,8 @@
 #' But you gain a weak attempt to look at dispersal limitation.
 #' 
 #' @export do.sdm
-do.sdm = function(sdm.data, my.index, col.index, sdm.type, colonization.only = 0){
+do.sdm = function(sdm.data, my.index, col.index, sdm.type, do.sdm.visualization, out.pdf, start.year, end.year, colonization.only = 0){
   
-  # Fix this to be in terms of my.index  
   index.table = table(my.index)
   n.sp = index.table[["1"]] # gives the count of columns that pertain to species
   
@@ -30,6 +29,11 @@ do.sdm = function(sdm.data, my.index, col.index, sdm.type, colonization.only = 0
   sp.thresholds.lst = validation.diagnostics.lst = rep(list(NA),n.sp)
   
   if (sdm.type == 2 | sdm.type == "biomod"){ env.lyrs = setup.env.lyrs(sdm.data) }
+
+  # Set up plotting options
+  if (out.pdf != "none" & do.sdm.visualization == 1){
+    pdf(file = out.pdf) 
+  }  
   
   ## Loop through species, and create species distribution model for each species
   for (i in 1:n.sp){  #note: species numbers are not sequential
@@ -46,7 +50,7 @@ do.sdm = function(sdm.data, my.index, col.index, sdm.type, colonization.only = 0
     
     # Basic sdm
     if (sdm.type == 1 | sdm.type == "basic"){
-      basic.out = do.basic.sdm(sp.col, sdm.data, col.index)
+      basic.out = do.basic.sdm(sp.col, sdm.data, col.index, fs.presences.all, do.sdm.visualization, start.year, end.year)
       validation.diagnostics.lst[[i]] = basic.out[[1]]
       sp.thresholds.lst[[i]] = basic.out[[2]]
       other.info = sp.thresholds.lst
@@ -63,6 +67,10 @@ do.sdm = function(sdm.data, my.index, col.index, sdm.type, colonization.only = 0
     
   }
   
+  if (out.pdf != "none" & do.sdm.visualization == 1){
+    dev.off()
+  }
+  
   return(list(validation.diagnostics.lst, other.info))
 }
 
@@ -70,7 +78,7 @@ do.sdm = function(sdm.data, my.index, col.index, sdm.type, colonization.only = 0
 #' 
 #' Mainly for getting started - will want to do something more sophisticated for the final analysis
 #' 
-do.basic.sdm = function(sp.col, sdm.data, col.index, training.proportion = 2/3){
+do.basic.sdm = function(sp.col, sdm.data, col.index, fs.presences.all, do.sdm.visualization, start.year, end.year, training.proportion = 2/3){
   
   # Make sure the species' own data won't be used as a predictor
   col.index[sp.col] = 0 # This does not affect the global col.index, just the local one in this function
@@ -113,6 +121,24 @@ do.basic.sdm = function(sp.col, sdm.data, col.index, training.proportion = 2/3){
   #positive.predictive.value = validation.diagnostics[[8]]
   #negative.predictive.value = validation.diagnostics[[9]]
   
+  if (do.sdm.visualization == 1){
+    # Create visualization of SDM for this species
+    suitability.vec.all = classify.plots(sdm.data, sp.thresholds)
+    
+    # Calculate range of values used in training set, and mark values as extraploation or not
+    extrapolation.index = extrapolation.test(sdm.data, train.dat)
+    #extrapolation.index = rep("not calculated",length(sdm.data$plotyear)) #Temporary fix to make ploting work. This part of the code needs to be scripted.
+    
+    sp.name = names(sdm.data)[sp.col]
+    
+    # Create visual "map" of SDM for Exploratories
+    visualize.sdm(sp.name, validation.diagnostics, sdm.data$plotyear, suitability.vec.all,
+                  fs.presences.all, training.index, extrapolation.index, start.year, end.year)
+    #**# the below does not appear to match the current function!
+    #visualize.sdm(sdm.data$plotyear, suitability.vec.all, fs.presences.all, training.index, extrapolation.index)
+    
+  }
+  
   return(list(validation.diagnostics, sp.thresholds)) # Combine sp.thresholds & visualization.info.lst, will be returned as an other.info object
   
 }
@@ -120,7 +146,7 @@ do.basic.sdm = function(sp.col, sdm.data, col.index, training.proportion = 2/3){
 #' Check SDM quality
 #' 
 #' 
-check.sdm.quality = function(validation.diagnostics.lst, plot.title, out.pdf = "none"){
+check.sdm.quality.old = function(validation.diagnostics.lst, plot.title, out.pdf = "none"){
   
   #**# Add ability to export to pdf.
   
@@ -141,10 +167,59 @@ check.sdm.quality = function(validation.diagnostics.lst, plot.title, out.pdf = "
   
   # Plot accuracy, sensitivity, and specificity
   par(mfrow = c(1,2))  
-
+  
   boxplot(acc.vec, ylim = c(0,1), ylab = "Accuracy") #**# check if this should be 1!
   plot(sen.vec, spec.vec, xlab = "Sensitivity", ylab = "Specificity", xlim = c(0,1), ylim = c(0,1))
+  
+}
 
+
+#' Quick recode (move to myr!)
+#' 
+#' Recode a value if it matches a particular value
+#' 
+quick.recode = function(x, target, new.value){
+  
+  y = x
+  if (x == target){
+    y = new.value
+  }
+  
+  return(y)
+}
+
+#' Check SDM quality
+#' 
+#' Plot results of the SDM, and color code SDM results that are considered "plausible"
+#' 
+check.sdm.quality.v2 = function(my.sdm.results, out.pdf = "none"){
+  
+  # Export to pdf
+  if (out.pdf != "none"){
+    pdf("sdm.quality.test.pdf") #**# This can be improved!
+  }
+
+  my.sdm.results = as.data.frame(my.sdm.results)
+  
+  # Plot sensitivity vs. specificity, with colors giving accuracy. Use symbol to denote plausibility
+  sen = as.num(my.sdm.results$Sensitivity)
+  spec = as.num(my.sdm.results$Specificity)
+  acc = as.num(my.sdm.results$Accuracy)
+  plaus = as.num(my.sdm.results$Plausible)
+  
+  # Create color ramp based on accuracy
+  acc.col = sapply(acc, threshold.recode, 0.85) #**# FIX THIS LATER
+  acc.col = sapply(acc.col,quick.recode, 1, "green")
+  acc.col = sapply(acc.col, quick.recode, 0, 1)
+  
+  # Recode plaus to give the symbols I want
+  plaus = sapply(plaus, quick.recode, 0, 5)
+  plaus = sapply(plaus, quick.recode, 1, 16)
+  
+  #X axis is typically 1 - specificity, with y axis as sensitivity. Oops, I got taht switched.
+  plot(spec, sen, xlab = "Specificity (True Negative Rate)", ylab = "Sensitivity (True Positive Rate)", col = acc.col, pch = plaus)
+  
+  
 }
 
 
@@ -473,37 +548,6 @@ extrapolation.test = function(eval.dat, train.dat){
 }
 
 
-#' SDM Visualize Main
-#' 
-#' 
-sdm.visualize.main = function(STUFF){
-  #**# Actually, since there is a loop, I can see why this was in the main function.
-  if (out.pdf != "none"){
-    pdf(file = out.pdf) 
-  }
-  
-  #**# Still need to figure out what inputs are needed and how to properly transfer them to this function, which is now in a different location (but may get moved back???)
-  
-  # Calculate suitability for the entire data set for mapping purposes
-  #suitability.vec.all = classify.plots(sdm.data, lsts.out) 
-  suitability.vec.all = env.lyrs[[6]] #**# THIS can't be right!!!
-  
-  # Calculate range of values used in training set, and mark values as extraploation or not
-  # (#**# how important is this? Probably pretty important, because the SDM is more likely to fail on extrapolated predictions)
-  extrapolation.index = extrapolation.test(sdm.data, train.dat)
-  #extrapolation.index = rep("not calculated",length(sdm.data$plotyear)) #Temporary fix to make ploting work. This part of the code needs to be scripted.
-  
-  # Create visual "map" of SDM for Exploratories
-  visualize.sdm(sdm.data$plotyear, suitability.vec.all, fs.presences.all, training.index, extrapolation.index)
-  
-  
-  if (out.pdf != "none"){
-    dev.off()
-  }
-  
-}
-
-
 #' Create a visual of the SDM predictions
 #' 
 #' For visually assessing the quality of the results. Plan is to plot suitability as the color of the cell,
@@ -516,7 +560,9 @@ sdm.visualize.main = function(STUFF){
 #' @param suitability.vec.all
 #' @param training.index Index to indicate which cells were in the training (T) and which were in the validation sets (F).
 #' 
-visualize.sdm = function(sp.name, sp.image, validation.diagnostics, plotlabels, suitability.vec.all, fs.presences.all, training.index, extrapolation.index){
+visualize.sdm = function(sp.name, validation.diagnostics, plotlabels, suitability.vec.all, fs.presences.all, training.index, extrapolation.index, start.year, end.year){
+  
+  #message("validation.diagnostics part has been temporarily turned off.")
   
   # Check that all input vectors are the correct length
   t1 = length(plotlabels)
@@ -530,124 +576,147 @@ visualize.sdm = function(sp.name, sp.image, validation.diagnostics, plotlabels, 
     stop("Input vectors are not all of the same length")
   }
   
-  # set up image to add to plot
+  plots = substr(plotlabels,1,5)
+  years = substr(plotlabels,7,10)
   
-  # Set up multipanel plot (NOT plotting this as a raster, more flexibility this way, I think)
-  rows = 15
-  cols = 10
-  if (t1 != rows * cols){
-    stop("plot layout needs to be fixed to accomodate a different plot layout.")
-  }
+  #Loop through years
+  for (year in start.year:end.year){
 
-  # Plot one blank row to use for title purposes & add plant image
-  # (I couldn't figure out how to add an image to the upper margin!)
-  rows = rows + 1
-  
-  par(mfrow = c(rows,cols))
-  par(oma = c(0,0,0,0))
-  par(mar = c(0,0,0,0))
-
-  # Plot blank row as header
-  for (blank in 1:cols){
-    plot(1,1, xaxt = 'n', yaxt = 'n', xlab = "", ylab = "", bty = "n", col = 0)
+    #Create index for subsetting vectors
+    year.index = grep(year, years)
     
-  }
-
-  # Add image of plant in last cell
-  require(jpeg)
-  #my.image = matrix(seq(0.1,0.9,.1), nrow = 3)
-  my.image = sprintf("species_images/%s", sp.name)
-  my.image = readJPEG(my.image)  
-  rasterImage(my.image, par("usr")[1], par("usr")[3],par("usr")[2],par("usr")[4])
-  #xleft, ybottom, xright, ytop
-  
-  
-  #**# These are size sensitive - so a better solution or some adjustment may be necessary
-  # Add species name, validation information, and species photo to plot
-  mtext(sp.name, side = 3, outer = TRUE, at = 0.5, line = -3)
-  validation.info = sprintf("Accuracy = %s\nSensitivity = %s\nSpecificity = %s",
-                            validation.diagnostics$accuracy,
-                            validation.diagnostics$sensitivity,
-                            validation.diagnostics$specificity)
-  
-  mtext(validation.info, side = 3, outer = TRUE, at = 0.1, line = -4.5)
+    # Subset vectors to a single year (plots are for 1 year only, otherwise, I think it would be too much)
+    pltlbls = plots[year.index]
+    t1 = length(pltlbls) # Reassign t1
+    suit.vec.all = suitability.vec.all[year.index]
+    fs.pres.all = fs.presences.all[year.index]
+    train.i = training.index[year.index]
+    e.i = extrapolation.index[year.index]
     
-  #Loop through cells in landscape
-  for (i in 1:t1){
-    
-    #Unpack cell values
-    suitability = suitability.vec.all[i]
-    presence = fs.presences.all[i]
-    training = training.index[i]
-    extrap = extrapolation.index[i]
-    label = plotlabels[i]
-    
-    # Set suitability color
-    if (suitability == 1){
-      suit.col = "darkgreen"
-    }else{
-      suit.col = "darkorange3" #"firebrick3" #Not using red because of red/green colorblindness
+    # Set up multipanel plot (NOT plotting this as a raster, more flexibility this way, I think)
+    rows = 15
+    cols = 10
+    if (t1 != rows * cols){
+      #**# temporarily disabling this
+      #warning("rows * cols does not match data length. Incorrect plotting behavior may occur.")
     }
     
-    # Set color for extrapolation border
-    if (extrap == 1){
-      extr.col = "gold"
-    }else{
-      extr.col = "gray"
-    }
+    # Plot one blank row to use for title purposes & add plant image
+    # (I couldn't figure out how to add an image to the upper margin!)
+    rows = rows + 1
     
-    # Set color for whether data is training or validation
-    if (training == 1){
-      train.col = "dodgerblue4"
-    }else{
-      train.col = "mediumpurple2"
-    }
+    par(mfrow = c(rows,cols))
+    par(oma = c(0,0,0,0))
+    par(mar = c(0,0,0,0))
     
-    # Plot this cell
-      #1,1 makes a single point. When absent, this point is set to the background color.
-    plot(1,1, xaxt = 'n', yaxt = 'n', xlab = "", ylab = "")
-    
-    #par(xpd = NA)
-    
-    #par("usr") is a vector (x1,x2,y1,y2)
-    
-    # Set up & plot training rectangle
-    xleft = par("usr")[1]
-    ybottom = par("usr")[3]
-    xright = par("usr")[2]
-    ytop = par("usr")[4]
-    rect(xleft,ybottom,xright,ytop,col = train.col)
-    
-    #**# Watch for problems with plotting with the increments (not sure how that will change, depending on the size of the plot. but seems to work, so if it ain't broke, don't fix it!)
-    
-    # Set up & plot extrapolation rectangle
-    xleft = par("usr")[1] + 0.05
-    ybottom = par("usr")[3] + 0.05
-    xright = par("usr")[2] - 0.05
-    ytop = par("usr")[4] - 0.05
-    rect(xleft,ybottom,xright,ytop,col = extr.col)
-    
-    # Set up & plot suitability rectangle
-    xleft = par("usr")[1] + 0.1
-    ybottom = par("usr")[3] + 0.1
-    xright = par("usr")[2] - 0.1
-    ytop = par("usr")[4] - 0.1
-    rect(xleft,ybottom,xright,ytop,col = suit.col)
-    
-    # Replot the points over the rectangles if the species is present
-    if (presence == 1){
-      points(1,1, cex = 3, pch = 16, col = "deepskyblue")
-    }
-    
-    # Add plot label
-    x.center = (par("usr")[1] + par("usr")[2]) / 2
-    y.height = par("usr")[3] + 0.15
-    text(x.center, y.height, labels = sprintf("%s",label), col = "white")
-    # have a second cell border indicate training or validation data
-    # have cell border indicate whether values represent extrapolation
-    # Color code cell as suitable or not
-    # plot an symbol to indicate plant presences/absences
+    # Plot blank row as header
+    for (blank in 1:cols){
+      plot(1,1, xaxt = 'n', yaxt = 'n', xlab = "", ylab = "", bty = "n", col = 0)
       
+    }
+    
+    #my.image = matrix(seq(0.1,0.9,.1), nrow = 3)
+    # Add image of plant in last cell
+    my.image = sprintf("../datasets/plants/species_images/%s.jpg", sp.name)
+    if (file.exists(my.image)){
+      require(jpeg)
+      my.image = readJPEG(my.image)  
+      rasterImage(my.image, par("usr")[1], par("usr")[3],par("usr")[2],par("usr")[4])    
+      #xleft, ybottom, xright, ytop
+    }
+    
+    ##**# These are size sensitive - so a better solution or some adjustment may be necessary
+    ## Add species name & year
+    sp.name.year = sprintf("%s %s", sp.name, year)
+    mtext(sp.name.year, side = 3, outer = TRUE, at = 0.5, line = -3)
+
+    #, validation information, and species photo to plot
+    #validation.info = sprintf("Accuracy = %s\nSensitivity = %s\nSpecificity = %s",
+    #                          validation.diagnostics$accuracy,
+    #                          validation.diagnostics$sensitivity,
+    #                          validation.diagnostics$specificity)
+    #
+    #mtext(validation.info, side = 3, outer = TRUE, at = 0.1, line = -4.5)
+    
+    #Loop through cells in landscape
+    for (i in 1:t1){
+      
+      #Unpack cell values
+      suitability = suit.vec.all[i]
+      presence = fs.pres.all[i]
+      training = train.i[i]
+      extrap = e.i[i]
+      label = pltlbls[i]
+      
+      # Set suitability color
+      if (suitability == 1){
+        suit.col = "darkgreen"
+      }else{
+        suit.col = "darkorange3" #"firebrick3" #Not using red because of red/green colorblindness
+      }
+      
+      # Set color for extrapolation border
+      if (extrap == 1){
+        extr.col = "gold"
+      }else{
+        extr.col = "gray"
+      }
+      
+      # Set color for whether data is training or validation
+      if (training == 1){
+        train.col = "dodgerblue4"
+      }else{
+        train.col = "mediumpurple2"
+      }
+      
+      # Plot this cell
+      #1,1 makes a single point. When absent, this point is set to the background color.
+      plot(1,1, xaxt = 'n', yaxt = 'n', xlab = "", ylab = "")
+      
+      #par(xpd = NA)
+      
+      #par("usr") is a vector (x1,x2,y1,y2)
+      
+      # Set up & plot training rectangle
+      xleft = par("usr")[1]
+      ybottom = par("usr")[3]
+      xright = par("usr")[2]
+      ytop = par("usr")[4]
+      rect(xleft,ybottom,xright,ytop,col = train.col)
+      
+      #**# Watch for problems with plotting with the increments (not sure how that will change, depending on the size of the plot. but seems to work, so if it ain't broke, don't fix it!)
+      
+      # Set up & plot extrapolation rectangle
+      xleft = par("usr")[1] + 0.05
+      ybottom = par("usr")[3] + 0.05
+      xright = par("usr")[2] - 0.05
+      ytop = par("usr")[4] - 0.05
+      rect(xleft,ybottom,xright,ytop,col = extr.col)
+      
+      # Set up & plot suitability rectangle
+      xleft = par("usr")[1] + 0.1
+      ybottom = par("usr")[3] + 0.1
+      xright = par("usr")[2] - 0.1
+      ytop = par("usr")[4] - 0.1
+      rect(xleft,ybottom,xright,ytop,col = suit.col)
+      
+      # Replot the points over the rectangles if the species is present
+      if (presence == 1){
+        points(1,1, cex = 3, pch = 16, col = "deepskyblue")
+      }
+      
+      # Add plot label
+      x.center = (par("usr")[1] + par("usr")[2]) / 2
+      y.height = par("usr")[3] + 0.15
+      text(x.center, y.height, labels = sprintf("%s",label), col = "white")
+      # have a second cell border indicate training or validation data
+      # have cell border indicate whether values represent extrapolation
+      # Color code cell as suitable or not
+      # plot an symbol to indicate plant presences/absences
+      
+    }
   }
   
 }
+
+

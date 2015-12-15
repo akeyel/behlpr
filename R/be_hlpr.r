@@ -38,7 +38,7 @@ output.results.to.table = function(model.type, model.name, results.table,sp.name
   
   # Format validation diagnostics for output
   # "False Positive Rate", "False Negative Rate", "Positive predictive value", "Negative predictive value",
-  out.hdr = c("Model Type", "Model", "Species", "Plausible Model", "Accuracy", "Sensitivity", "Specificity", "True Presences", "False Presences", "True Absences", "False Absences")
+  out.hdr = c("Model Type", "Model", "Species", "Plausible", "Accuracy", "Sensitivity", "Specificity", "True Presences", "False Presences", "True Absences", "False Absences")
   
   # Extract results for first species
   vd = validation.diagnostics.lst[[1]]
@@ -154,8 +154,8 @@ setup.predictors = function(sp.data, predictors.vec, predictors.paths, start.yea
   # Set up land use data
   if (run.vec[1] == 1){
     # Read in land use data (grazing, mowing, fertilziation, LUI)
-    ludata.part1 = read.ludata(path.vec[1])  
-    ludata.part2 = read.ludata("C:/docs/beplants/datasets/BExIS/landuse/19266_mod.csv")
+    ludata.part1 = behlpr:::read.ludata(path.vec[1])  
+    ludata.part2 = behlpr:::read.ludata("C:/docs/beplants/datasets/BExIS/landuse/19266_mod.csv")
     #**# fix this to be a relative path at some point
     
     # Merge LUI with unstandardized data
@@ -167,9 +167,7 @@ setup.predictors = function(sp.data, predictors.vec, predictors.paths, start.yea
   
   # Set up climate data
   if (run.vec[2] == 1){
-    # Read in climate data from Exploratories (will this actually be useful???)
-    # Redownload the climate data using the new interface?
-    # or just use the data that you have already?
+    # Read in climate data from Exploratories
     cddata = read.climate("climate/climate_data_year_qc3/plots_year_qc3.csv")
     
     # Add dataset to list of datasets
@@ -184,12 +182,11 @@ setup.predictors = function(sp.data, predictors.vec, predictors.paths, start.yea
   }
   
   if (run.vec[4] == 1){
-    # Read in fragmentation data #**# CORINE or something from Thomas Nauss (or both?)
-    # Corine is available, but Nauss's data that I don't have is theoretically better.
+    # Read in fragmentation data
     if (!file.exists(path.vec[4])){
       frag.file.1 = "C:/docs/beplants/datasets/fragmentation/18148.csv"
       frag.file.2 = "C:/docs/beplants/datasets/fragmentation/insectscales.csv"
-      make.frag(frag.file.1, frag.file.2,start.year, end.year, path.vec[4])
+      behlpr:::make.frag(frag.file.1, frag.file.2,start.year, end.year, path.vec[4])
     }
     
     frag = read.csv(path.vec[4])
@@ -251,6 +248,26 @@ setup.predictors = function(sp.data, predictors.vec, predictors.paths, start.yea
   #**# Is this outdated - I should just be able to use my.index, right??
   col.index = rep(0, length(my.index)) # Initialize the variable with no variables as predictor variables
   col.index[ my.index > 1 ] = 1 # Set to use any columns that have a value > 1 in my.index May want to edit this if including other species as covariate.
+  
+  # If any duplicates in first letter, rename fields to have non-duplicating (but stupid) names
+  # Get names to test for duplicates
+  predictor.names = names(my.data)[col.index == 1]
+  # Extract just the first letters
+  predictor.letters = sapply(predictor.names, substr,1,1)
+  # Test if the length of the vector containing first letters is the same as a vector of just the unique first letters
+  # If unequal, rename headers
+  if (length(unique(predictor.letters)) != length(predictor.letters)){
+    
+    number.of.names = length(predictor.names)
+    new.names = c()
+    for (i in 1:number.of.names){
+      new.name = sprintf("%s_%s", toupper(letters[i]), predictor.names[i])
+      new.names = c(new.names, new.name)
+    }
+    
+    # Re-name the main dataframe to have non-duplicate names.
+    names(my.data)[col.index == 1] = new.names
+  }
   
   return(list(my.data, my.index, col.index))
 }
@@ -448,17 +465,18 @@ message("I removed all highlighting, deleted the first two rows,
 #' Using Catrin Westphal & colleagues data
 #' Note: I saved the exploratories data as a .csv, to make it easier for me to import (because I don't know how to do tab delimiters in R, apparently)
 make.frag = function(frag.file.1, frag.file.2, start.year, end.year, pc.file.1, pc.file.2, frag.out){
-  frag.file.1 = "C:/docs/beplants/datasets/fragmentation/18148.csv"
-  frag.file.2 = "C:/docs/beplants/datasets/fragmentation/insectscales.csv"
-  #frag.file = "C:/docs/beplants/datasets/fragmentation/18148.csv"
-  pc.file.1 = "C:/docs/beplants/datasets/fragmentation/grassland_PCs.csv"
-  pc.file.2 = "C:/docs/beplants/datasets/fragmentation/edge_density_PCs.csv"
-  frag.out = "C:/docs/beplants/datasets/fragmentation/frag_data_for_analysis.csv"
+  #frag.file.1 = "C:/docs/beplants/datasets/fragmentation/18148.csv"
+  #frag.file.2 = "C:/docs/beplants/datasets/fragmentation/insectscales.csv"
+  #frag.out = "C:/docs/beplants/datasets/fragmentation/frag_data_for_analysis.csv"
   #start.year = 2008
   #end.year = 2013
+
+  #**# These are hardwired. That's not great.
+  pc.file.1 = "C:/docs/beplants/datasets/fragmentation/grassland_PCs.csv"
+  pc.file.2 = "C:/docs/beplants/datasets/fragmentation/edge_density_PCs.csv"
   
-  frag1 = frag.analysis(frag.file.1, pc.file.1, "grassland")
-  frag2 = frag.analysis(frag.file.2, pc.file.2, "edgedensity")
+  frag1 = behlpr:::frag.analysis(frag.file.1, pc.file.1, "grassland")
+  frag2 = behlpr:::frag.analysis(frag.file.2, pc.file.2, "edgedensity")
   frag = merge(frag1, frag2, by = "plotyear")
   write.table(frag, file = frag.out, , sep = ",", row.names = F)
 
@@ -472,18 +490,19 @@ frag.analysis = function(frag.file, pc.file, data.type){
   frag.dat = read.csv(frag.file)
  
   # Fix plot ID
-  frag.dat = fix.plotid(frag.dat, "EP_PLOTID")
+  frag.dat = behlpr:::fix.plotid(frag.dat, "EP_PLOTID")
   
   # Repeat plot values to join for each year for joining purposes
   years = seq(start.year,end.year)
   num.yrs = length(years)
-  plots = rep(frag.dat$EP_PLOTID, num.yrs)
+  plot.vec = frag.dat$EP_PLOTID
+  plots = rep(plot.vec, num.yrs)
   years.vec = sort(rep(years, length(plot.vec)))
   
   plotyear = sprintf("%s_%s", plots, years.vec)
 
   #Do PCA
-  pca.out = frag.pca(frag.dat, data.type)
+  pca.out = behlpr:::frag.pca(frag.dat, data.type)
   data.out = pca.out[[1]]
   # output: list(grass.frag, grass.frag.loadings, center.means, explained.variation
   
@@ -1587,7 +1606,7 @@ metacom.analysis = function(sp.data, year){
   a = pairs(plot.data2) # FAIL - figure margins too large (i.e., it wants to make a BIG graph)
   # Do metacom's metacommunity analysis
   # This takes a long time to run!
-  outputs = metacom::Metacommunity(plot.data2)
+  #outputs = metacom::Metacommunity(plot.data2)
   
   #**# Maybe try the metacom stuff with Helge's data?? Maybe it'll give better results? I'm a little concerned about data quailty, given some of the perfect correlations.
   

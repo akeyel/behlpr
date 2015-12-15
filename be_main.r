@@ -20,53 +20,33 @@ setwd(spath)
 
 # Install custom packages (only need to do this 1x, or after updating packages)
 install.packages("behlpr", type = "source", repos = NULL)
-install.packages("myr", type = "source", repos = NULL)
+#install.packages("myr", type = "source", repos = NULL)
 
 ## load required packages
 library(behlpr)
 library(spatialdemography)
 library(myr)
 
-# Path for inputs for spatialdemography model
-in.path = "C:/docs/beplants/drafts/BE_data_paper/R_inputs/"
+# Set up paths
+in.path = "C:/docs/beplants/drafts/BE_data_paper/R_inputs/"  # Path for inputs for spatialdemography model
+out.path = "C:/docs/beplants/drafts/BE_data_paper/R_outputs/" # Base path for outputs for spatialdemography model
+opath = sprintf("%s/analysis/", out.path)  # Path for main analysis results
+desc.path = sprintf("%sdescriptive_information/", out.path) # Path to descriptive analysis results
+DispPath = sprintf("%sdispersal_tables/", spath) # Path to dispersal tables for spatialdemography model
+dpath = "C:/docs/beplants/datasets/" # Base path for data sets
+template.dir = sprintf("%sinput_templates/", in.path) # Path to templates to provide the basis for the analyses in SpatialDemography
+sp.base = sprintf("%s/Species/spfile_base.csv", template.dir) # Path containing species data to use as a template for input into the SpatialDemography model
+spfile = sprintf("%s/Species/spfile_spdem.csv", template.dir) # This file will be generated, the actual species file to be used by the spatialdemography model
 
-# Base path for outputs for spatialdemography model
-out.path = "C:/docs/beplants/drafts/BE_data_paper/R_outputs/"
-
-# Path for main analysis results
-opath = sprintf("%s/analysis/", out.path)
-
-# Path to descriptive analysis results
-desc.path = sprintf("%sdescriptive_information/", out.path)
-
-# Path to dispersal tables for spatialdemography model
-DispPath = sprintf("%sdispersal_tables/", spath)
-
-# Base path for data sets
-dpath = "C:/docs/beplants/datasets/"
-
-# Path to templates to provide the basis for the analyses in SpatialDemography
-template.dir = sprintf("%sinput_templates/", in.path) 
-
-# Path containing species data to use as a template for input into the SpatialDemography model
-sp.base = sprintf("%s/Species/spfile_base.csv", template.dir) 
-
-# This file will be generated, the actual species file to be used by the spatialdemography model
-spfile = sprintf("%s/Species/spfile_spdem.csv", template.dir) 
-
-# Indicator for whether to give messages about possible concerns about the code
-give.messages = 0 # 0 = no messages, 1 = messages
-
-# Do optional analyses
-optional.analyses = 0
-
-# Set up SDM (species distribution model) settings
-sdm.type = 1 # 1 = simple, 2 = with biomod2, 3 = with previous.occupancy data
+# Set up indicators
+give.messages = 0 # 0 = no messages, 1 = messages; # Indicator for whether to give messages about possible concerns about the code
+optional.analyses = 0 # Do optional analyses
+sdm.type = 1 # 1 = simple, 2 = with biomod2, 3 = with previous.occupancy data; # Set up SDM (species distribution model) settings
 
 # Set up spatialdemography settings
 file.ending = "BE"  
-start.year = 2008 #**# Arbitrarily chosen starting year
-end.year = 2013
+start.year = 2008 # Start with first year of consistent plant data
+end.year = 2013   # End with last year of plant data
 pool.type = "plot" # region & all are other anticipated options
 landscape.extent = 5 #**# can try different landscape sizes
 n.cells = landscape.extent ^ 2 # get number of cells in landscape
@@ -103,7 +83,7 @@ actual.presences.lst = convert.sp.data(sp.data, model.timestep) # Create the mod
 ## Do optional analyses
 if (optional.analyses == 1){
   # Do metacom analysis
-  metacom.analysis(sp.data)
+  metacom.analysis(sp.data, 2008) #**# NOT WORKING
   if (give.messages == 1){ metacom.analysis.notes() }
 
   # Read in trait data
@@ -117,7 +97,7 @@ if (give.messages == 1){message("SavePoint1.RData is out of date")}
 if (give.messages == 1){message("Note: to use distance to most recently occupied patch, I think we have to restrict the dataset to colonizations")}
 
 # Give a descriptor of the analysis.
-analysis.type = "abiotic" #**# Sandra, you will want to change this to "climate"
+analysis.type = "abiotic"
 
 # Abiotic variables
 lu.path = sprintf("%sBExIS/landuse/LUI_tool_cleaned.csv", dpath)
@@ -125,19 +105,21 @@ frag.path = sprintf("%sfragmentation/frag_data_for_analysis.csv", dpath)
 predictors.vec = c("landuse", "frag") #**# Sandra, you will want to change this to a vector with a single element "climate"
 predictors.paths = c(lu.path, frag.path) #**# Sandra, you will want to change this to be a single element vector called climate.path
 
-# Actually set up the predictor variables #**# Sandra, you will need to modify the climate section of the setup.predictors function in the behlpr package. 
-out.info = setup.predictors(sp.data, predictors.vec, predictors.paths)
-# This will be the dataset merging species and your predictor variables
-my.data = out.info[[1]]
-# This will contain an index identifying properties of the variables in my.data
-my.index = out.info[[2]]
-# This is an index used by the code for selectively removing columns from the analysis.
-col.index = out.info[[3]]
+# Actually set up the predictor variables
+out.info = setup.predictors(sp.data, predictors.vec, predictors.paths, start.year, end.year)
+my.data = out.info[[1]]   # This will be the dataset merging species and your predictor variables
+my.index = out.info[[2]]  # This will contain an index identifying properties of the variables in my.data
+col.index = out.info[[3]] # This is an index used by the code for selectively removing columns from the analysis.
 
+# Save Point 1 Updated 2015-12-12
 
 ## Do basic descriptive analysis of data
 if(give.messages == 1){message("Descriptive analysis still needs cleaning & proper outputting of results")}
 do.descriptives(my.data, my.index, desc.path)
+
+## Drop NA records from dataset
+my.data = na.omit(my.data)
+#str(my.data) # 11, 91, 325, 326, 439, 798 - rows dropped from my.data due to missing values
 
 ### Run Species Distribution model
 sdm.out = do.sdm(my.data, my.index, col.index, sdm.type)
@@ -145,21 +127,25 @@ validation.diagnostics.lst = sdm.out[[1]]
 thresholds = sdm.out[[2]]
 if (give.messages == 1){message("Need a way to make the output of thresholds more general if we start comparing linear models too.")}
 
-if (give.messages == 1){message("code to visually inspect sdm results for all species and to visualize the analysis are broken & need fixing")}
-# Visually examine quality of sdm results for all species
-#check.sdm.quality(validation.diagnostics.lst, "Land Use")
-
-# Visualize SDM analysis
-#visualize.sdm.main(sdm.out)
-
 # Create table output of results for further analysis
 model.type = "SDM-threshold"
 model.name = analysis.type
 results.table = sprintf("%sMain_Results.csv", opath)
+dir.create(opath, recursive = T)
 my.sdm.results = output.results.to.table(model.type, model.name, results.table, sp.names, validation.diagnostics.lst) 
 
+#**# NEED TO FIX my.sdm.results for plausibility name to plausible
+
 # This location saved as SavePoint2.RData
-if(give.messages == 1){message("SavePoint2.RData is currently out of date")}
+#if(give.messages == 1){message("SavePoint2.RData is currently out of date")} #Updated 2015-12-12
+
+# Visualize SDM analysis (show landscape with SDM results)
+#visualize.sdm.main(sdm.out)
+
+# Visually examine quality of sdm results for all species (via plots)
+check.sdm.quality.v2(my.sdm.results) #**# Add pdf here?
+
+
 
 ### Run SpatialDemography  
 # Set up species file
